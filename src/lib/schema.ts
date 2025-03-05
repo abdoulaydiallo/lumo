@@ -25,22 +25,70 @@ export const storeDocumentsStatuses = pgEnum("store_documents_statuses", ["pendi
 // 1. Tables critiques (Fondations)
 
 // Table: users
-export const users = pgTable(
-  "users",
-  {
-    id: serial("id").primaryKey(),
-    name: varchar("name", { length: 255 }).notNull(),
-    email: varchar("email", { length: 255 }).unique().notNull(),
-    password: text("password").notNull(),
-    role: userRoles("role").notNull().default("user"),
-    status: userStatus("status").notNull().default("pending"),
-    phoneNumber: varchar("phone_number", { length: 20 }).notNull(),
-    preferredLanguage: varchar("preferred_language", { length: 10 }).default("fr"),
-    uiPreferences: jsonb("ui_preferences"), // Ex. { "theme": "dark", "fontSize": "large" }
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
-  },
-);
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(), // Garde serial au lieu de text avec UUID
+  name: varchar("name", { length: 255 }),
+  email: varchar("email", { length: 255 }).unique(),
+  emailVerified: timestamp("email_verified", { mode: "date" }),
+  image: text("image"),
+  password: text("password"), // Nullable pour OAuth
+  role: userRoles("role").notNull().default("user"),
+  status: userStatus("status").notNull().default("pending"),
+  phoneNumber: varchar("phone_number", { length: 20 }).notNull(),
+  preferredLanguage: varchar("preferred_language", { length: 10 }).default("fr"),
+  uiPreferences: jsonb("ui_preferences"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Table accounts avec userId comme integer
+export const accounts = pgTable("accounts", {
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // "oauth", "oidc", "email", "credentials"
+  provider: text("provider").notNull(), // Ex. "google", "github"
+  providerAccountId: text("provider_account_id").notNull(),
+  refreshToken: text("refresh_token"),
+  accessToken: text("access_token"),
+  expiresAt: integer("expires_at"),
+  tokenType: text("token_type"),
+  scope: text("scope"),
+  idToken: text("id_token"),
+  sessionState: text("session_state"),
+});
+
+// Table sessions avec userId comme integer
+export const sessions = pgTable("sessions", {
+  sessionToken: text("session_token").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expires: timestamp("expires", { mode: "date" }).notNull(),
+});
+
+// Table verificationTokens (inchangée sauf nommage)
+export const verificationTokens = pgTable("verification_tokens", {
+  identifier: text("identifier").notNull(),
+  token: text("token").notNull(),
+  expires: timestamp("expires", { mode: "date" }).notNull(),
+});
+
+export const passwordResets = pgTable("password_resets", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Table authenticators avec userId comme integer
+export const authenticators = pgTable("authenticators", {
+  credentialID: text("credential_id").notNull().unique(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  providerAccountId: text("provider_account_id").notNull(),
+  credentialPublicKey: text("credential_public_key").notNull(),
+  counter: integer("counter").notNull(),
+  credentialDeviceType: text("credential_device_type").notNull(),
+  credentialBackedUp: boolean("credential_backed_up").notNull(),
+  transports: text("transports"),
+});
 
 // Table: addresses
 export const addresses = pgTable(
