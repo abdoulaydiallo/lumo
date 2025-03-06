@@ -69,7 +69,7 @@ export default function AuthErrorPage() {
 
           {/* Bouton de retour */}
           <Button asChild className="w-full" variant="default">
-            <Link href="/auth/login">Retourner à la connexion</Link>
+            <Link href="/login">Retourner à la connexion</Link>
           </Button>
 
           {/* Lien supplémentaire */}

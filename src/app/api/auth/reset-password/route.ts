@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { users, passwordResets } from "@/lib/schema";
+import { users, passwordResets } from "@/lib/db/schema";
 import { eq, and, gt } from "drizzle-orm";
 import { hashPassword } from "@/lib/utils";
 

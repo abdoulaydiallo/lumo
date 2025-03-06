@@ -27,13 +27,8 @@ import { z } from "zod";
 import { AlertCircle, Chrome } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
-
-const loginSchema = z.object({
-  email: z.string().email("Veuillez entrer un email valide"),
-  password: z
-    .string()
-    .min(6, "Le mot de passe doit contenir au moins 6 caractères"),
-});
+import { loginSchema } from "@/lib/utils/schemas";
+import { MessageAlert } from "../MessageAlert";
 
 interface LoginFormProps extends React.ComponentPropsWithoutRef<"div"> {}
 
@@ -43,6 +38,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
   const callbackUrl = searchParams.get("callbackUrl") || "/marketplace";
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -55,6 +51,8 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
   const handleLoginSubmit = (values: z.infer<typeof loginSchema>) => {
     startTransition(async () => {
       setError(null);
+      setSuccess(null);
+
       const result = await signIn("credentials", {
         email: values.email,
         password: values.password,
@@ -65,7 +63,8 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
       if (result?.error) {
         setError("Email ou mot de passe invalide");
       } else if (result?.url) {
-        router.push(result.url);
+        setSuccess("Connexion établie avec succes !");
+        setTimeout(() => router.push(result.url as string), 2000);
       } else {
         router.push(callbackUrl);
       }
@@ -168,11 +167,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                   </FormItem>
                 )}
               />
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+              {error && <MessageAlert type="error" message={error} />}
               <Button type="submit" className="w-full" disabled={isPending}>
                 {isPending ? "Connexion en cours..." : "Se connecter"}
               </Button>
@@ -180,7 +175,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
           </Form>
           <div className="text-center text-sm">
             Pas de compte ?{" "}
-            <a href="/auth/register" className="underline underline-offset-4">
+            <a href="/register" className="underline underline-offset-4">
               S'inscrire
             </a>
           </div>

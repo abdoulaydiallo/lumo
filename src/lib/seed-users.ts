@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users } from "./schema";
+import { users } from "./db/schema";
 import { hashPassword } from "./utils";
 
 interface UserSeed {

@@ -38,7 +38,7 @@ const resetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
-export default function ResetPasswordPage() {
+export default function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -73,7 +73,7 @@ export default function ResetPasswordPage() {
         setMessage(
           "Mot de passe réinitialisé avec succès ! Redirection vers la connexion..."
         );
-        setTimeout(() => router.push("/auth/login"), 2000);
+        setTimeout(() => router.push("/login"), 2000);
       }
     } catch (err) {
       setMessage("Erreur inattendue. Veuillez réessayer.");
@@ -152,7 +152,7 @@ export default function ResetPasswordPage() {
             </form>
           </Form>
           <div className="text-center text-sm">
-            <a href="/auth/login" className="underline underline-offset-4">
+            <a href="/login" className="underline underline-offset-4">
               Retour à la connexion
             </a>
           </div>

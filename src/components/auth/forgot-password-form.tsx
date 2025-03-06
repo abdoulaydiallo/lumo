@@ -28,7 +28,7 @@ const forgotPasswordSchema = z.object({
   email: z.string().email("Veuillez entrer un email valide"),
 });
 
-export default function ForgotPasswordPage() {
+export default function ForgotPasswordForm() {
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
       } else {
         const { message } = await response.json();
         setMessage(message);
-        setTimeout(() => router.push("/auth/login"), 2000);
+        setTimeout(() => router.push("/login"), 2000);
       }
     } catch (err) {
       setMessage("Erreur inattendue. Veuillez réessayer.");
@@ -120,7 +120,7 @@ export default function ForgotPasswordPage() {
             </form>
           </Form>
           <div className="text-center text-sm">
-            <a href="/auth/login" className="underline underline-offset-4">
+            <a href="/login" className="underline underline-offset-4">
               Retour à la connexion
             </a>
           </div>

@@ -14,7 +14,6 @@ export const registerSchema = z.object({
   role: z.enum(["user", "store", "driver", "admin", "manager"], {
     message: "Rôle invalide",
   }),
-  phoneNumber: z
-    .string()
-    .regex(/^\d{9,15}$/, { message: "Numéro de téléphone invalide (9-15 chiffres)" }),
+ phoneNumber: z.string()
+  .regex(/^\+?\d{9,15}$/, { message: "Numéro de téléphone invalide (9-15 chiffres, + optionnel)" })
 });

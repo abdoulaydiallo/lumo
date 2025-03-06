@@ -66,6 +66,7 @@ export const sessions = pgTable("sessions", {
 // Table verificationTokens (inchangée sauf nommage)
 export const verificationTokens = pgTable("verification_tokens", {
   identifier: text("identifier").notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   token: text("token").notNull(),
   expires: timestamp("expires", { mode: "date" }).notNull(),
 });
@@ -77,6 +78,7 @@ export const passwordResets = pgTable("password_resets", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
 
 // Table authenticators avec userId comme integer
 export const authenticators = pgTable("authenticators", {

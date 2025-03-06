@@ -31,32 +31,21 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Chrome } from "lucide-react";
-
-const formSchema = z.object({
-  name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
-  email: z.string().email("Veuillez entrer un email valide"),
-  password: z
-    .string()
-    .min(6, "Le mot de passe doit contenir au moins 6 caractères"),
-  role: z.enum(["user", "store", "driver", "admin", "manager"], {
-    required_error: "Veuillez sélectionner un rôle",
-  }),
-  phoneNumber: z
-    .string()
-    .min(10, "Le numéro de téléphone doit contenir au moins 10 chiffres"),
-});
+import { CheckCircle2, Chrome, TriangleAlert } from "lucide-react";
+import { registerSchema } from "@/lib/utils/schemas";
+import { MessageAlert } from "../MessageAlert";
+import Link from "next/link";
 
 interface RegisterFormProps extends React.ComponentPropsWithoutRef<"div"> {}
 
 export function RegisterForm({ className, ...props }: RegisterFormProps) {
   const router = useRouter();
   const [success, setSuccess] = useState<string | null>(null);
-  const [isPendingSubmit, startSubmitTransition] = useTransition();
-  const [isPendingGoogle, startGoogleTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<typeof registerSchema>>({
+    resolver: zodResolver(registerSchema),
     defaultValues: {
       name: "",
       email: "",
@@ -65,44 +54,44 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
       phoneNumber: "",
     },
   });
-const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    startSubmitTransition(async () => {
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
+  const handleSubmit = (values: z.infer<typeof registerSchema>) => {
+    startTransition(async () => {
+      setError(null);
+      setSuccess(null);
 
-      if (response.ok) {
-        signIn("credentials", {
-          email: values.email,
-          password: values.password,
-          callbackUrl: getRedirectPath(values.role),
+      try {
+        const response = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(values),
         });
-      } else {
-        const { error } = await response.json();
-        router.push(`/auth/error?error=RegistrationFailed&error_description=${encodeURIComponent(error || "Échec de l'inscription")}`);
+
+        if (!response.ok) {
+          const { error } = await response.json();
+          setError(error || "Échec de l'inscription");
+        } else {
+          setSuccess(
+            "Inscription réussie. Vérifiez votre email pour activer votre compte."
+          );
+        }
+      } catch (err) {
+        setError("Erreur inattendue. Veuillez réessayer.");
+        console.error("Erreur lors de l'inscription:", err);
       }
     });
   };
 
   const handleGoogleSignIn = () => {
-    startGoogleTransition(() => {
+    startTransition(() => {
       signIn("google", { callbackUrl: "/marketplace" });
     });
   };
 
-  const getRedirectPath = (role: string) => {
-    return (
-      role === "store" ? "/dashboard/store" :
-      role === "driver" ? "/dashboard/driver" :
-      role === "admin" || role === "manager" ? "/dashboard/admin" :
-      "/marketplace"
-    );
-  };
-  
   return (
-    <div className={cn("flex flex-col gap-2 overflow-auto", className)} {...props}>
+    <div
+      className={cn("flex flex-col gap-2 overflow-auto", className)}
+      {...props}
+    >
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">Inscription</CardTitle>
@@ -115,12 +104,10 @@ const handleSubmit = (values: z.infer<typeof formSchema>) => {
             variant="outline"
             className="w-full flex items-center gap-2"
             onClick={handleGoogleSignIn}
-            disabled={isPendingGoogle || isPendingSubmit}
+            disabled={isPending}
           >
             <Chrome className="w-5 h-5" />
-            {isPendingGoogle
-              ? "Inscription en cours..."
-              : "S'inscrire avec Google"}
+            {isPending ? "Inscription en cours..." : "S'inscrire avec Google"}
           </Button>
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -146,7 +133,7 @@ const handleSubmit = (values: z.infer<typeof formSchema>) => {
                     <FormControl>
                       <Input
                         placeholder="Nom complet"
-                        disabled={isPendingSubmit || isPendingGoogle}
+                        disabled={isPending}
                         {...field}
                       />
                     </FormControl>
@@ -164,7 +151,7 @@ const handleSubmit = (values: z.infer<typeof formSchema>) => {
                       <Input
                         placeholder="contact@example.com"
                         type="email"
-                        disabled={isPendingSubmit || isPendingGoogle}
+                        disabled={isPending}
                         {...field}
                       />
                     </FormControl>
@@ -182,7 +169,7 @@ const handleSubmit = (values: z.infer<typeof formSchema>) => {
                       <Input
                         placeholder="+224-6xx-xxx-xxx"
                         type="tel"
-                        disabled={isPendingSubmit || isPendingGoogle}
+                        disabled={isPending}
                         {...field}
                       />
                     </FormControl>
@@ -200,7 +187,7 @@ const handleSubmit = (values: z.infer<typeof formSchema>) => {
                       <Input
                         type="password"
                         placeholder="**********"
-                        disabled={isPendingSubmit || isPendingGoogle}
+                        disabled={isPending}
                         {...field}
                       />
                     </FormControl>
@@ -217,7 +204,7 @@ const handleSubmit = (values: z.infer<typeof formSchema>) => {
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
-                      disabled={isPendingSubmit || isPendingGoogle}
+                      disabled={isPending}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -234,21 +221,30 @@ const handleSubmit = (values: z.infer<typeof formSchema>) => {
                   </FormItem>
                 )}
               />
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isPendingSubmit || isPendingGoogle}
-              >
-                {isPendingSubmit ? "Inscription en cours..." : "S'inscrire"}
-              </Button>
+              {error && <MessageAlert message={error} type="error" />}
+              {success && (
+                <div className="space-y-4">
+                  <MessageAlert message={success} type="success" />
+                  <Button asChild className="w-full">
+                    <Link href="/login">Retour à la connexion</Link>
+                  </Button>
+                </div>
+              )}
+              {!success && (
+                <Button type="submit" className="w-full" disabled={isPending}>
+                  {isPending ? "Inscription en cours..." : "S'inscrire"}
+                </Button>
+              )}
             </form>
           </Form>
-          <div className="text-center text-sm">
-            Déjà un compte ?{" "}
-            <a href="/auth/login" className="underline underline-offset-4">
-              Se connecter
-            </a>
-          </div>
+          {!success && (
+            <div className="text-center text-sm">
+              Déjà un compte ?{" "}
+              <Link href="/login" className="underline underline-offset-4">
+                Se connecter
+              </Link>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

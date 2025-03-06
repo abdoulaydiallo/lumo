@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { users, passwordResets } from "@/lib/schema";
+import { users, passwordResets } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { sendEmail } from "@/lib/email"; // Import depuis le nouveau fichier
 import crypto from "crypto";
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       createdAt: new Date(),
     });
 
-    const resetLink = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${token}`;
+    const resetLink = `${process.env.NEXTAUTH_URL}/reset-password?token=${token}`;
 
     await sendEmail(
       user.email as string,

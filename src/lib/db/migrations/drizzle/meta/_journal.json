@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1741232032093,
+      "tag": "0000_productive_ultimatum",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1741237661439,
+      "tag": "0001_mysterious_ultron",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1741238514045,
+      "tag": "0002_typical_expediter",
+      "breakpoints": true
+    }
+  ]
+}

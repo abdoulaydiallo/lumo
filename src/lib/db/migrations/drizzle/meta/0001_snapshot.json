@@ -1,6 +1,6 @@
 {
-  "id": "224efd09-9321-4a64-a690-9f7360425daf",
-  "prevId": "de67fe2a-77fb-4fbb-9796-87853a1fe212",
+  "id": "17afe4c3-2d80-4497-9318-464bca6cc1e5",
+  "prevId": "96702449-5a77-493b-a389-754d477c96e7",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3459,9 +3459,15 @@
       "name": "verification_tokens",
       "schema": "",
       "columns": {
-        "identifier": {
-          "name": "identifier",
-          "type": "text",
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -3479,7 +3485,21 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "verification_tokens_user_id_users_id_fk": {
+          "name": "verification_tokens_user_id_users_id_fk",
+          "tableFrom": "verification_tokens",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

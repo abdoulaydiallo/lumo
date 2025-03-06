@@ -1,39 +1,64 @@
-export { auth as middleware } from "@/auth";
-import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { auth } from "./src/lib/auth";
 
-export default auth((req) => {
-  const { pathname } = req.nextUrl;
-  const session = req.auth;
+// Forcer le runtime Node.js
+export const runtime = "nodejs";
 
-  // Si pas de session, rediriger vers /login
-  if (!session || !session.user) {
-    return NextResponse.redirect(new URL("/auth/login", req.url));
+// Fonction pour créer un matcher de route
+function createRouteMatcher(routes: string[]) {
+  return (request: NextRequest) => {
+    return routes.some((route) => {
+      if (route.endsWith("(.*)")) {
+        const baseRoute = route.slice(0, -4);
+        return request.nextUrl.pathname.startsWith(baseRoute);
+      }
+      return request.nextUrl.pathname === route;
+    });
+  };
+}
+
+// Fonction pour rediriger
+function redirect(request: NextRequest, destination: string) {
+  return NextResponse.redirect(new URL(destination, request.url));
+}
+
+// Routes publiques accessibles sans authentification
+const isPublicRoute = createRouteMatcher(["/", "/login", "/register", "/forgot-password", "/verify", "/reset-password"]);
+
+// Routes réservées aux admins
+const isAdminRoute = createRouteMatcher(["/dashboard", "/dashboard/(.*)"]);
+
+// Middleware principal
+export async function middleware(request: NextRequest) {
+  // Récupérer la session via NextAuth
+  const session = await auth();
+
+  // Vérifier si l'utilisateur est authentifié
+  const isAuthenticated = !!session?.user;
+
+  // Si la route n'est pas publique et l'utilisateur n'est pas authentifié
+  if (!isPublicRoute(request) && !isAuthenticated) {
+    return redirect(request, "/login");
   }
 
-  const userRole = session.user.role as "user" | "store" | "driver" | "admin" | "manager";
+  // Si la route est réservée aux admins
+  if (isAdminRoute(request)) {
+    const userRole = session?.user?.role;
 
-  // Règles d'accès par rôle
-  const roleAccess: Record<string, string[]> = {
-    "/dashboard/store": ["store"],
-    "/dashboard/driver": ["driver"],
-    "/dashboard/admin": ["admin", "manager"],
-    "/marketplace": ["user", "store", "driver", "admin", "manager"], // Accessible à tous
-  };
-
-  // Vérifier l'accès
-  for (const [path, allowedRoles] of Object.entries(roleAccess)) {
-    if (pathname.startsWith(path)) {
-      if (!allowedRoles.includes(userRole)) {
-        return NextResponse.redirect(new URL("/auth/login", req.url));
-      }
-      break;
+    // Si l'utilisateur n'est pas admin, rediriger
+    if (userRole !== "admin") {
+      return redirect(request, "/marketplace");
     }
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/marketplace"],
+  matcher: [
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webm|mp4|json)).*)",
+    "/",
+    "/(api|trpc)(.*)",
+  ],
 };

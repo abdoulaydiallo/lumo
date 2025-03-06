@@ -1,0 +1,1 @@
+ALTER TABLE "verification_tokens" RENAME COLUMN "id" TO "identifier";

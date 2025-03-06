@@ -1,24 +1,23 @@
+import { eq } from "drizzle-orm";
+import { db } from "../db";
+import { comparePassword } from "../utils";
+import Google from "next-auth/providers/google";
+import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import Google from "next-auth/providers/google";
-import { eq } from "drizzle-orm";
-import { db } from "./lib/db";
-import { users, accounts, sessions, verificationTokens } from "./lib/schema";
-import { comparePassword } from "./lib/utils";
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { users, accounts, sessions, verificationTokens } from "../db/schema";
 
 class InvalidLoginError extends CredentialsSignin {
-  code = "Invalid email or password"
+  code = "Invalid email or password";
 }
 
 export const { auth, handlers } = NextAuth({
-  // @ts-ignore
-  adapter: DrizzleAdapter(db, {// @ts-ignore
-    usersTable: users, // @ts-ignore
-    accountsTable: accounts,// @ts-ignore
-    sessionsTable: sessions,
+  adapter: DrizzleAdapter(db, {
+    usersTable: users as any,
+    accountsTable: accounts as any,
+    sessionsTable: sessions as any,
     verificationTokensTable: verificationTokens,
-  }),
+  }) as any,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -41,6 +40,7 @@ export const { auth, handlers } = NextAuth({
               email: users.email,
               name: users.name,
               password: users.password,
+              image: users.image,
               role: users.role,
               status: users.status,
             })
@@ -59,17 +59,18 @@ export const { auth, handlers } = NextAuth({
           if (!user.password) {
             throw new Error("Ce compte utilise une connexion via un autre fournisseur (ex. Google)");
           }
-          
+
           const isValid = await comparePassword(String(credentials.password), user.password as string);
           if (!isValid) {
             throw new InvalidLoginError();
           }
 
           return {
-            id: user.id,
+            id: String(user.id),
             email: user.email,
             name: user.name ?? null,
             role: user.role,
+            image: user.image ?? null,
           };
         } catch (error) {
           console.error("Authentication error:", error);
@@ -88,15 +89,15 @@ export const { auth, handlers } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = user.role as "user" | "store" | "driver" | "admin" | "manager";
+        token.image = user.image;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user = {
-          ...session.user,
-          role: token.role as "user" | "store" | "driver" | "admin" | "manager",
-        };
+      if (token?.id) {
+        session.user.id = token.id as never;
+        session.user.role = token.role as "user" | "store" | "driver" | "admin" | "manager";
+        session.user.image = token.image as string | undefined;
       }
       return session;
     },
@@ -107,24 +108,24 @@ export const { auth, handlers } = NextAuth({
           .from(users)
           .where(eq(users.email, user.email!))
           .limit(1);
-        
+
         if (existingUser) {
           if (existingUser.password) {
-              throw new Error("Cet email est déjà associé à un compte avec mot de passe. Utilisez la connexion par email.");
-            }
-            if (existingUser.status !== "active") {
+            throw new Error("Cet email est déjà associé à un compte avec mot de passe. Utilisez la connexion par email.");
+          }
+          if (existingUser.status !== "active") {
             throw new Error("Votre compte est inactif ou en attente de validation");
           }
-        }else {
-          // Nouvel utilisateur via Google : définir un rôle par défaut
+        } else {
           const [newUser] = await db
             .insert(users)
             .values({
               email: user.email!,
               name: user.name ?? "Utilisateur Google",
-              role: "user", // Rôle par défaut, ajustable
+              image: user.image ?? null, // Ajouter l'image Google
+              role: "user",
               status: "active",
-              phoneNumber: "+224600101010", // Placeholder, à ajuster
+              phoneNumber: "620101010",
             })
             .returning({ id: users.id });
 
@@ -142,14 +143,14 @@ export const { auth, handlers } = NextAuth({
           });
         }
       }
-      return true; // Autorise la connexion
+      return true;
     },
     async redirect({ url, baseUrl }) {
       return url.startsWith("/") ? `${baseUrl}${url}` : url;
     },
   },
   pages: {
-    signIn: "/auth/login",
-    error: "/auth/error",
+    signIn: "/login",
+    error: "/error",
   },
 });
