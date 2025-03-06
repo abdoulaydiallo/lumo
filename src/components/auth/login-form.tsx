@@ -1,8 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,8 +24,9 @@ import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Chrome } from "lucide-react";
+import { AlertCircle, Chrome } from "lucide-react";
 import Link from "next/link";
+import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
 
 const loginSchema = z.object({
   email: z.string().email("Veuillez entrer un email valide"),
@@ -38,9 +39,10 @@ interface LoginFormProps extends React.ComponentPropsWithoutRef<"div"> {}
 
 export function LoginForm({ className, ...props }: LoginFormProps) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const callbackUrl = searchParams.get("callbackUrl") || "/marketplace";
-  const [isPendingSubmit, startSubmitTransition] = useTransition();
-  const [isPendingGoogle, startGoogleTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -51,18 +53,40 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
   });
 
   const handleLoginSubmit = (values: z.infer<typeof loginSchema>) => {
-    startSubmitTransition(() => {
-      signIn("credentials", {
+    startTransition(async () => {
+      setError(null);
+      const result = await signIn("credentials", {
         email: values.email,
         password: values.password,
+        redirect: false,
         callbackUrl,
       });
+
+      if (result?.error) {
+        setError("Email ou mot de passe invalide");
+      } else if (result?.url) {
+        router.push(result.url);
+      } else {
+        router.push(callbackUrl);
+      }
     });
   };
 
   const handleGoogleSignIn = () => {
-    startGoogleTransition(() => {
-      signIn("google", { callbackUrl });
+    startTransition(async () => {
+      setError(null);
+      const result = await signIn("google", {
+        redirect: false,
+        callbackUrl,
+      });
+
+      if (result?.error) {
+        setError("Erreur lors de la connexion avec Google");
+      } else if (result?.url) {
+        router.push(result.url);
+      } else {
+        router.push(callbackUrl);
+      }
     });
   };
 
@@ -80,12 +104,10 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
             variant="outline"
             className="w-full flex items-center gap-2"
             onClick={handleGoogleSignIn}
-            disabled={isPendingGoogle || isPendingSubmit}
+            disabled={isPending}
           >
             <Chrome className="w-5 h-5" />
-            {isPendingGoogle
-              ? "Connexion en cours..."
-              : "Se connecter avec Google"}
+            {isPending ? "Connexion en cours..." : "Se connecter avec Google"}
           </Button>
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -112,7 +134,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                       <Input
                         placeholder="contact@example.com"
                         type="email"
-                        disabled={isPendingSubmit || isPendingGoogle}
+                        disabled={isPending}
                         {...field}
                       />
                     </FormControl>
@@ -128,7 +150,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                     <div className="flex items-center justify-between">
                       <FormLabel>Mot de passe</FormLabel>
                       <Link
-                        href="/auth/forgot-password"
+                        href="/forgot-password"
                         className="text-sm text-muted-foreground underline-offset-4 hover:underline"
                       >
                         Mot de passe oublié ?
@@ -138,7 +160,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                       <Input
                         type="password"
                         placeholder="**********"
-                        disabled={isPendingSubmit || isPendingGoogle}
+                        disabled={isPending}
                         {...field}
                       />
                     </FormControl>
@@ -146,12 +168,13 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                   </FormItem>
                 )}
               />
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isPendingSubmit || isPendingGoogle}
-              >
-                {isPendingSubmit ? "Connexion en cours..." : "Se connecter"}
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+              <Button type="submit" className="w-full" disabled={isPending}>
+                {isPending ? "Connexion en cours..." : "Se connecter"}
               </Button>
             </form>
           </Form>

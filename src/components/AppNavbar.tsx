@@ -1,6 +1,7 @@
 "use client";
 
 import { UserAvatar } from "@/components/UserAvatar";
+import { ModeToggle } from "./ModeToogle";
 import Link from "next/link";
 
 export function AppNavbar() {
@@ -9,7 +10,10 @@ export function AppNavbar() {
       <Link href="/" className="text-xl font-bold">
         Marketplace
       </Link>
-      <UserAvatar />
+      <div className="flex item-center justify-center space-x-4">
+        <UserAvatar />
+        <ModeToggle />
+      </div>
     </nav>
   );
 }
