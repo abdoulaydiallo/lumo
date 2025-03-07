@@ -39,7 +39,7 @@ function getInitials(name: string | null | undefined): string {
  * @param {string} [props.className] - Classes supplémentaires.
  * @returns {JSX.Element} - Avatar avec menu déroulant.
  */
-export default function UserAvatar({ className }: { className?: string }) {
+export function UserAvatar({ className }: { className?: string }) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -101,7 +101,7 @@ export default function UserAvatar({ className }: { className?: string }) {
           </Avatar>
           <Badge
             variant="secondary"
-            className="absolute bottom-1 -right-7 text-[10px] font-medium capitalize px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/30 dark:bg-primary/30 dark:text-primary-foreground dark:border-primary/50"
+            className="hidden md:block absolute bottom-1 -right-7 text-[10px] font-medium capitalize px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/30 dark:bg-primary/30 dark:text-primary-foreground dark:border-primary/50"
           >
             {role}
           </Badge>
@@ -153,7 +153,7 @@ export default function UserAvatar({ className }: { className?: string }) {
         <DropdownMenuSeparator className="bg-muted/20" />
         <DropdownMenuItem
           className="w-full text-sm font-medium text-destructive cursor-pointer hover:bg-destructive/10 rounded-md transition-all duration-200"
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={() => signOut()}
         >
           Déconnexion
         </DropdownMenuItem>

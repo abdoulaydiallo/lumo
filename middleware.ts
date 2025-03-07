@@ -1,8 +1,11 @@
+// app/middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "./src/lib/auth";
+import { db } from "./src/lib/db";
+import { stores } from "./src/lib/db/schema";
+import { eq } from "drizzle-orm";
 
-// Forcer le runtime Node.js
 export const runtime = "nodejs";
 
 // Fonction pour créer un matcher de route
@@ -24,32 +27,53 @@ function redirect(request: NextRequest, destination: string) {
 }
 
 // Routes publiques accessibles sans authentification
-const isPublicRoute = createRouteMatcher(["/", "/login", "/register", "/forgot-password", "/verify", "/reset-password"]);
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/verify",
+  "/reset-password",
+  "/marketplace/stores/create", // Ajouté pour permettre la création
+]);
 
 // Routes réservées aux admins
 const isAdminRoute = createRouteMatcher(["/dashboard", "/dashboard/(.*)"]);
 
-// Middleware principal
+// Routes nécessitant une boutique pour "store"
+const requiresStoreRoute = createRouteMatcher(["/marketplace/stores", "/marketplace/stores/(.*)"]);
+
 export async function middleware(request: NextRequest) {
-  // Récupérer la session via NextAuth
   const session = await auth();
-
-  // Vérifier si l'utilisateur est authentifié
   const isAuthenticated = !!session?.user;
+  const { pathname } = request.nextUrl;
 
-  // Si la route n'est pas publique et l'utilisateur n'est pas authentifié
-  if (!isPublicRoute(request) && !isAuthenticated) {
+  // Routes publiques
+  if (isPublicRoute(request)) {
+    return NextResponse.next();
+  }
+
+  // Si pas authentifié, rediriger vers login
+  if (!isAuthenticated) {
     return redirect(request, "/login");
   }
 
-  // Si la route est réservée aux admins
-  if (isAdminRoute(request)) {
-    const userRole = session?.user?.role;
+  // Vérification pour rôle "store"
+  if (session.user.role === "store" && requiresStoreRoute(request)) {
+    const [store] = await db
+      .select()
+      .from(stores)
+      .where(eq(stores.userId, Number(session.user.id)));
 
-    // Si l'utilisateur n'est pas admin, rediriger
-    if (userRole !== "admin") {
-      return redirect(request, "/marketplace");
+    if (!store) {
+      // Si pas de boutique, rediriger vers la création
+      return redirect(request, "/marketplace/stores/create");
     }
+  }
+
+  // Routes admin
+  if (isAdminRoute(request) && session.user.role !== "admin") {
+    return redirect(request, "/marketplace");
   }
 
   return NextResponse.next();

@@ -4,7 +4,8 @@ import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { auth } from "@/lib/auth";
-import Navbar from "@/components/Navbar";
+import Navbar from "@/components/navbar/Navbar";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -25,16 +26,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
-
-  const links = [
-    { href: "/", label: "Accueil" },
-    { href: "/products", label: "Produits" },
-    ...(session?.user?.role === "admin"
-      ? [{ href: "/dashboard", label: "Tableau de bord" }]
-      : []),
-    { href: "/account", label: "Profil" },
-  ];
 
   return (
     <html lang="fr" suppressHydrationWarning>
@@ -48,7 +39,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <SessionProvider>
-            <Navbar logo="Goulo" links={links} />
+            <Navbar logo="Marketplace"/>
             <div>{children}</div>
           </SessionProvider>
         </ThemeProvider>
