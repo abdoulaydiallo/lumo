@@ -202,8 +202,9 @@ export default function ProfilePage() {
               </div>
               <div className="space-y-2">
                 <Upload
-                  onUpload={handleImageUpload}
-                  multiple={false}
+                  onChange={(urls) => handleImageUpload(urls[0] as any)} // Prend la première URL
+                  maxSize={5}
+                  maxFiles={1} // Limite à 1 pour profileImageUrl
                   className="w-full"
                 />
               </div>

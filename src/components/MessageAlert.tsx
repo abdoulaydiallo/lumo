@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { TriangleAlert, CheckCircle2 } from "lucide-react";
+import { JSX } from "react";
 
 interface MessageAlertProps {
     message: string | null;
