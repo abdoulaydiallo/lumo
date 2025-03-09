@@ -445,6 +445,16 @@ export const productVariants = pgTable("product_variants", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Table: productStocks
+export const productStocks = pgTable('product_stocks', {
+  id: serial('id').primaryKey(),
+  productId: integer('product_id').references(() => products.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  stockLevel: integer('stock_level').notNull(),
+  reservedStock: integer('reserved_stock').notNull().default(0),
+  availableStock: integer('available_stock').notNull(), // Calculé
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 // Table: productImages
 export const productImages = pgTable("product_images", {
   id: serial("id").primaryKey(),
@@ -457,12 +467,15 @@ export const productImages = pgTable("product_images", {
 // Table: promotions
 export const promotions = pgTable("promotions", {
   id: serial("id").primaryKey(),
+  storeId: integer("store_id").references(() => stores.id, { onDelete: "cascade", onUpdate: "cascade" }),
   code: varchar("code", { length: 100 }).unique(),
   discountPercentage: integer("discount_percentage").notNull(),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
+  isExpired: boolean("is_expired").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
 
 // Table: productPromotions
 export const productPromotions = pgTable("product_promotions", {

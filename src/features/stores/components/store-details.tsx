@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FullStore, Store } from "../api/types";
 import OpeningHoursDisplay from "./opening-hours-display";
+import StoreOwnerActions from "./store-owner-actions";
 
 interface StoreDetailsProps {
   store: FullStore;
@@ -70,11 +71,7 @@ export default function StoreDetails({ store, isOwner }: StoreDetailsProps) {
             {/* Titre et statut */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               {isOwner && (
-                <Button asChild variant="default" className="w-full sm:w-auto">
-                  <Link href={`/marketplace/stores/${store.id}/edit`}>
-                    Modifier la boutique
-                  </Link>
-                </Button>
+                <StoreOwnerActions storeId={store.id} storeName={store.name} />
               )}
             </div>
 

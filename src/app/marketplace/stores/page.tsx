@@ -8,7 +8,7 @@ export default async function StoresPage() {
     const allStores = await getAllStores();
 
     return (
-      <div className="container mx-auto py-6">
+      <div className="max-w-5xl mx-auto py-6">
         <Heading
           title="Boutiques"
           subtitle="Toutes les boutiques disponibles"
@@ -19,7 +19,7 @@ export default async function StoresPage() {
   } catch (error) {
     console.error("Error in StoresPage:", error);
     return (
-      <div className="container mx-auto py-6">
+      <div className="max-w-5xl mx-auto py-6">
         <h1 className="text-2xl font-bold text-foreground mb-6">Boutiques</h1>
         <p className="text-destructive">
           Erreur lors du chargement des boutiques.

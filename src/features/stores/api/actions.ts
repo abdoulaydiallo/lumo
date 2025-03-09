@@ -125,3 +125,24 @@ export async function getStoreById(storeId: number): Promise<Store | null> {
     .limit(1);
   return data.length > 0 ? data[0] : null;
 }
+
+export async function deleteStore(storeId: number) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "store") {
+    throw new Error("Non autorisé");
+  }
+
+  const userId = Number(session.user.id);
+  const existingStore = await getStoreByUserId(userId);
+  if (!existingStore || existingStore.id !== storeId) {
+    throw new Error("Boutique non trouvée ou non autorisée");
+  }
+
+  try {
+    await db.delete(stores).where(eq(stores.id, storeId));
+    console.log(`Boutique ${storeId} supprimée avec succès par l'utilisateur ${userId}`);
+  } catch (error) {
+    console.error("Erreur lors de la suppression de la boutique:", error);
+    throw new Error("Impossible de supprimer la boutique");
+  }
+}

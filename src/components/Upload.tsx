@@ -226,7 +226,7 @@ export function Upload({
                   <img
                     src={src}
                     alt={`Image ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                   <Button
                     variant="destructive"
@@ -263,13 +263,13 @@ export function Upload({
       </Dialog>
 
       {value.length > 0 && !open && (
-        <div className="grid grid-cols-3 gap-2 mt-2">
+        <div className="flex gap-2 mt-2">
           {value.map((src, index) => (
             <img
               key={index}
               src={src}
               alt={`Image ${index + 1}`}
-              className="w-full h-24 object-cover rounded"
+              className="w-24 h-24 object-contain rounded"
             />
           ))}
         </div>
