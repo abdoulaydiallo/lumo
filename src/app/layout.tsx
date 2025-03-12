@@ -8,6 +8,7 @@ import Navbar from "@/components/navbar/Navbar";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import QueryClientProviderWrapper from "@/providers/query-client-provider";
+import { SearchProvider } from "@/contexts/SearchContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,8 +45,10 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <SessionProvider session={session}>
-              <Navbar logo="Marketplace" />
-              <div>{children}</div>
+              <SearchProvider>
+                <Navbar logo="Marketplace" />
+                <div>{children}</div>
+              </SearchProvider>
             </SessionProvider>
           </ThemeProvider>
         </QueryClientProviderWrapper>

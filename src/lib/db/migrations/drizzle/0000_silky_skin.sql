@@ -235,6 +235,15 @@ CREATE TABLE "product_promotions" (
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+CREATE TABLE "product_stocks" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"product_id" integer,
+	"stock_level" integer NOT NULL,
+	"reserved_stock" integer DEFAULT 0 NOT NULL,
+	"available_stock" integer NOT NULL,
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
 CREATE TABLE "product_variants" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"product_id" integer,
@@ -260,10 +269,12 @@ CREATE TABLE "products" (
 --> statement-breakpoint
 CREATE TABLE "promotions" (
 	"id" serial PRIMARY KEY NOT NULL,
+	"store_id" integer,
 	"code" varchar(100),
 	"discount_percentage" integer NOT NULL,
 	"start_date" timestamp,
 	"end_date" timestamp,
+	"is_expired" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now(),
 	CONSTRAINT "promotions_code_unique" UNIQUE("code")
 );
@@ -477,6 +488,7 @@ CREATE TABLE "users" (
 --> statement-breakpoint
 CREATE TABLE "verification_tokens" (
 	"identifier" text NOT NULL,
+	"user_id" integer NOT NULL,
 	"token" text NOT NULL,
 	"expires" timestamp NOT NULL
 );
@@ -515,8 +527,10 @@ ALTER TABLE "product_category_relation" ADD CONSTRAINT "product_category_relatio
 ALTER TABLE "product_images" ADD CONSTRAINT "product_images_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "product_promotions" ADD CONSTRAINT "product_promotions_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "product_promotions" ADD CONSTRAINT "product_promotions_promotion_id_promotions_id_fk" FOREIGN KEY ("promotion_id") REFERENCES "public"."promotions"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "product_stocks" ADD CONSTRAINT "product_stocks_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "product_variants" ADD CONSTRAINT "product_variants_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "products" ADD CONSTRAINT "products_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "promotions" ADD CONSTRAINT "promotions_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "referrals" ADD CONSTRAINT "referrals_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "referrals" ADD CONSTRAINT "referrals_referred_user_id_users_id_fk" FOREIGN KEY ("referred_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "reports" ADD CONSTRAINT "reports_generated_by_users_id_fk" FOREIGN KEY ("generated_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
@@ -543,5 +557,18 @@ ALTER TABLE "ticket_messages" ADD CONSTRAINT "ticket_messages_ticket_id_support_
 ALTER TABLE "ticket_messages" ADD CONSTRAINT "ticket_messages_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "tracking" ADD CONSTRAINT "tracking_shipment_id_shipments_id_fk" FOREIGN KEY ("shipment_id") REFERENCES "public"."shipments"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "user_preferences" ADD CONSTRAINT "user_preferences_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "verification_tokens" ADD CONSTRAINT "verification_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "wishlists" ADD CONSTRAINT "wishlists_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
-ALTER TABLE "wishlists" ADD CONSTRAINT "wishlists_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE cascade;
+ALTER TABLE "wishlists" ADD CONSTRAINT "wishlists_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+CREATE INDEX "order_items_product_id_idx" ON "order_items" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "product_category_relation_product_id_idx" ON "product_category_relation" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "product_category_relation_category_id_idx" ON "product_category_relation" USING btree ("category_id");--> statement-breakpoint
+CREATE INDEX "product_images_product_id_idx" ON "product_images" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "product_promotions_product_id_idx" ON "product_promotions" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "product_promotions_promotion_id_idx" ON "product_promotions" USING btree ("promotion_id");--> statement-breakpoint
+CREATE INDEX "product_stocks_product_id_idx" ON "product_stocks" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "product_variants_product_id_idx" ON "product_variants" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "products_store_id_idx" ON "products" USING btree ("store_id");--> statement-breakpoint
+CREATE INDEX "products_price_idx" ON "products" USING btree ("price");--> statement-breakpoint
+CREATE INDEX "products_stock_status_idx" ON "products" USING btree ("stock_status");--> statement-breakpoint
+CREATE INDEX "products_created_at_idx" ON "products" USING btree ("created_at");

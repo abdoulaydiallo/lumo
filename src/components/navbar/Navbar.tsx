@@ -8,18 +8,22 @@ import { SearchBar } from "./SearchBar";
 import { NavLinks } from "./NavLinks";
 import { UserActions } from "./UserActions";
 import { MobileMenu } from "./MobileMenu";
+import { useStore } from "@/features/stores/hooks/use-store";
 
 export function Navbar({ logo = "Marketplace", className }: NavbarProps) {
   const { data: session, status } = useSession();
-
+  
+  
   const getLinks = (): NavLink[] => {
     const baseLinks = [
       { href: "/", label: "Accueil" },
       { href: "/marketplace/stores", label: "Boutiques" },
       { href: "/marketplace/products", label: "Produits" },
     ];
-
+    
     if (!session?.user) return baseLinks;
+    const { data: store, isLoading, error } = useStore(session?.user.id);
+    if (!store) return baseLinks;
 
     const roleLinks: Record<string, NavLink[]> = {
       user: [
@@ -28,18 +32,21 @@ export function Navbar({ logo = "Marketplace", className }: NavbarProps) {
       ],
       store: [
         {
-          href: `/marketplace/stores/${session.user.id || ""}`,
+          href: `/marketplace/stores/${store.id || ""}`,
           label: "Ma Boutique",
         },
         {
-          href: `/marketplace/stores/${session.user.id || ""}/settings`,
+          href: `/marketplace/stores/${store.id || ""}/settings`,
           label: "Paramètres",
         },
         {
-          href: `/marketplace/stores/${session.user.id || ""}/analytics`,
+          href: `/marketplace/stores/${store.id || ""}/analytics`,
           label: "Analytiques",
         },
-        { href: "/marketplace/orders", label: "Commandes" },
+        {
+          href: `/marketplace/stores/${store.id || ""}/orders`,
+          label: "Commandes",
+        },
       ],
       driver: [
         {

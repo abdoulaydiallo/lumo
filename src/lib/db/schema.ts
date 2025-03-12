@@ -10,7 +10,9 @@ import {
   numeric,
   pgEnum,
   index,
+  vector,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm/sql";
 
 // Enums
 export const userStatus = pgEnum("user_status", ["pending", "active", "rejected"]);
@@ -144,11 +146,16 @@ export const products = pgTable(
     price: integer("price").notNull(),
     weight: integer("weight").notNull().default(10),
     storeId: integer("store_id").references(() => stores.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    stockStatus: varchar("stock_status", { length: 50 }).default("in_stock"), // Ex. "in_stock", "low_stock", "out_of_stock"
+    stockStatus: varchar("stock_status", { length: 50 }).default("in_stock"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
-  
+  (table) => [
+    index("products_store_id_idx").on(table.storeId),
+    index("products_price_idx").on(table.price),
+    index("products_stock_status_idx").on(table.stockStatus),
+    index("products_created_at_idx").on(table.createdAt)
+  ]
 );
 
 // Table: orders
@@ -169,13 +176,19 @@ export const orders = pgTable(
 );
 
 // Table: orderItems
-export const orderItems = pgTable("order_items", {
-  id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  productId: integer("product_id").references(() => products.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  quantity: integer("quantity").notNull(),
-  price: integer("price").notNull(),
-});
+export const orderItems = pgTable(
+  "order_items",
+  {
+    id: serial("id").primaryKey(),
+    orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    productId: integer("product_id").references(() => products.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    quantity: integer("quantity").notNull(),
+    price: integer("price").notNull(),
+  },
+  (table) => [
+    index("order_items_product_id_idx").on(table.productId),
+  ]
+);
 
 // 2. Tables logistiques
 
@@ -417,52 +430,80 @@ export const driverReviews = pgTable("driver_reviews", {
 // 5. Tables de personnalisation produit
 
 // Table: productCategories
-export const productCategories = pgTable("product_categories", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
-  description: text("description"),
-  icon: varchar("icon", { length: 255 }),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const productCategories = pgTable(
+  "product_categories",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description"),
+    icon: varchar("icon", { length: 255 }),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  }
+);
 
 // Table: productCategoryRelation
-export const productCategoryRelation = pgTable("product_category_relation", {
-  id: serial("id").primaryKey(),
-  productId: integer("product_id").references(() => products.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  categoryId: integer("category_id").references(() => productCategories.id, { onDelete: "cascade", onUpdate: "cascade" }),
-});
+export const productCategoryRelation = pgTable(
+  "product_category_relation",
+  {
+    id: serial("id").primaryKey(),
+    productId: integer("product_id").references(() => products.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    categoryId: integer("category_id").references(() => productCategories.id, { onDelete: "cascade", onUpdate: "cascade" }),
+  },
+  (table) => [
+    index("product_category_relation_product_id_idx").on(table.productId),
+    index("product_category_relation_category_id_idx").on(table.categoryId),
+  ]
+);
 
 // Table: productVariants
-export const productVariants = pgTable("product_variants", {
-  id: serial("id").primaryKey(),
-  productId: integer("product_id").references(() => products.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  variantType: varchar("variant_type", { length: 50 }).notNull(),
-  variantValue: varchar("variant_value", { length: 50 }).notNull(),
-  price: integer("price").notNull(),
-  stock: integer("stock").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const productVariants = pgTable(
+  "product_variants",
+  {
+    id: serial("id").primaryKey(),
+    productId: integer("product_id").references(() => products.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    variantType: varchar("variant_type", { length: 50 }).notNull(),
+    variantValue: varchar("variant_value", { length: 50 }).notNull(),
+    price: integer("price").notNull(),
+    stock: integer("stock").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("product_variants_product_id_idx").on(table.productId),
+  ]
+);
 
 // Table: productStocks
-export const productStocks = pgTable('product_stocks', {
-  id: serial('id').primaryKey(),
-  productId: integer('product_id').references(() => products.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
-  stockLevel: integer('stock_level').notNull(),
-  reservedStock: integer('reserved_stock').notNull().default(0),
-  availableStock: integer('available_stock').notNull(), // Calculé
-  updatedAt: timestamp('updated_at').defaultNow(),
-});
+export const productStocks = pgTable(
+  "product_stocks",
+  {
+    id: serial("id").primaryKey(),
+    productId: integer("product_id").references(() => products.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    stockLevel: integer("stock_level").notNull(),
+    reservedStock: integer("reserved_stock").notNull().default(0),
+    availableStock: integer("available_stock").notNull(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("product_stocks_product_id_idx").on(table.productId),
+  ]
+);
 
 // Table: productImages
-export const productImages = pgTable("product_images", {
-  id: serial("id").primaryKey(),
-  productId: integer("product_id").references(() => products.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
-  imageUrl: text("image_url").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const productImages = pgTable(
+  "product_images",
+  {
+    id: serial("id").primaryKey(),
+    productId: integer("product_id").references(() => products.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    imageUrl: text("image_url").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("product_images_product_id_idx").on(table.productId),
+  ]
+);
 
 // Table: promotions
 export const promotions = pgTable("promotions", {
@@ -478,13 +519,20 @@ export const promotions = pgTable("promotions", {
 
 
 // Table: productPromotions
-export const productPromotions = pgTable("product_promotions", {
-  id: serial("id").primaryKey(),
-  productId: integer("product_id").references(() => products.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  promotionId: integer("promotion_id").references(() => promotions.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  targetAudience: varchar("target_audience", { length: 50 }), // Ex. "new_users"
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export const productPromotions = pgTable(
+  "product_promotions",
+  {
+    id: serial("id").primaryKey(),
+    productId: integer("product_id").references(() => products.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    promotionId: integer("promotion_id").references(() => promotions.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    targetAudience: varchar("target_audience", { length: 50 }),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("product_promotions_product_id_idx").on(table.productId),
+    index("product_promotions_promotion_id_idx").on(table.promotionId),
+  ]
+);
 
 // 6. Tables de gestion des retours
 
@@ -605,3 +653,7 @@ export const offlineQueue = pgTable("offline_queue", {
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+function tsVector(arg0: string) {
+  throw new Error("Function not implemented.");
+}

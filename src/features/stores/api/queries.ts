@@ -158,6 +158,7 @@ export async function getStoreByUserId(userId: number): Promise<Partial<Store> |
         name: stores.name,
         phoneNumber: stores.phoneNumber,
         email: stores.email,
+        userId: stores.userId,
         profileImageUrl: stores.profileImageUrl,
         coverImageUrl: stores.coverImageUrl,
         description: stores.description,
@@ -178,6 +179,7 @@ export async function getStoreByUserId(userId: number): Promise<Partial<Store> |
       name: String(store.name),
       phoneNumber: String(store.phoneNumber),
       email: String(store.email),
+      userId: Number(store.userId),
       profileImageUrl: store.profileImageUrl ? String(store.profileImageUrl) : null,
       coverImageUrl: store.coverImageUrl ? String(store.coverImageUrl) : null,
       description: store.description ? String(store.description) : null,
@@ -188,7 +190,6 @@ export async function getStoreByUserId(userId: number): Promise<Partial<Store> |
       updatedAt: store.updatedAt as any,
     };
 
-    console.log("Store by user ID:", JSON.stringify(result, null, 2));
     return result;
   } catch (error) {
     console.error("Error in getStoreByUserId:", error);

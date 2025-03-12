@@ -13,14 +13,14 @@ import Link from "next/link";
 
 interface ProductCardProps {
   product: Product;
-  storeId: number;
+  storeId?: number;
 }
 
 export default function ProductCard({ product, storeId }: ProductCardProps) {
   const primaryImage = product.images[0]?.imageUrl || "/placeholder-image.jpg";
   const hasPromotion = product.promotions.length > 0;
   const discountPercentage = hasPromotion
-    ? product.promotions[0].promotion.discountPercentage
+    ? product.promotions[0].discountPercentage
     : 0;
   const discountedPrice = hasPromotion
     ? product.price * (1 - discountPercentage / 100)

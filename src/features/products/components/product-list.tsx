@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ProductListProps {
   products: Product[];
-  storeId: number;
+  storeId?: number;
 }
 
 export default function ProductList({ products, storeId }: ProductListProps) {
@@ -25,12 +25,10 @@ export default function ProductList({ products, storeId }: ProductListProps) {
   }
 
   return (
-    <div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} storeId={storeId} />
-        ))}
-      </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} storeId={storeId} />
+      ))}
     </div>
   );
 }

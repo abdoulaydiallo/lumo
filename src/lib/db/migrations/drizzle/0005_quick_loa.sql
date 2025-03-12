@@ -1,1 +1,0 @@
-ALTER TABLE "promotions" ADD COLUMN "is_expired" boolean DEFAULT false NOT NULL;
