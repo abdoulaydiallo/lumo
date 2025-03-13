@@ -1,0 +1,1 @@
+CREATE INDEX "promotions_discount_idx" ON "promotions" USING btree ("discount_percentage");

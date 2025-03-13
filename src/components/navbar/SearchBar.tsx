@@ -1,75 +1,98 @@
-// @/components/navbar/SearchBar.tsx
 "use client";
 
-import { useState, useCallback, useTransition } from "react";
-import { useSearchContext } from "@/contexts/SearchContext";
-import { Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search, X } from "lucide-react";
+import { useDebounce } from "use-debounce";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
-
-// Fonction utilitaire pour debounce
-function debounce<T extends (...args: any[]) => void>(func: T, wait: number) {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
+import { Button } from "@/components/ui/button";
+import { useSearchContext } from "@/contexts/SearchContext";
+import { useState, useCallback, useTransition, useEffect } from "react";
 
 interface SearchBarProps {
   className?: string;
 }
 
 export function SearchBar({ className }: SearchBarProps) {
-  const { setSearchTerm } = useSearchContext();
-  const [localSearch, setLocalSearch] = useState(""); // État local pour la saisie immédiate
-  const [isPending, startTransition] = useTransition(); // Gestion des transitions
+  const router = useRouter();
+  const { searchTerm, setSearchTerm } = useSearchContext();
+  const [localSearch, setLocalSearch] = useState<string>(searchTerm || "");
+  const [debouncedSearch] = useDebounce(localSearch, 300); // Délai de 300ms
+  const [isPending, startTransition] = useTransition();
 
-  // Débouncer la mise à jour de searchTerm dans le contexte
-  const debouncedSetSearchTerm = useCallback(
-    debounce((value: string) => {
+  const handleSearch = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
       startTransition(() => {
-        console.log("Mise à jour debounced de searchTerm :", value);
-        setSearchTerm(value);
+        setSearchTerm(debouncedSearch);
+        const params = new URLSearchParams();
+        if (debouncedSearch) params.set("q", debouncedSearch);
+        router.push(`/marketplace/products?${params.toString()}`, { scroll: false });
       });
-    }, 200),
-    [setSearchTerm]
+    },
+    [debouncedSearch, setSearchTerm, router]
   );
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (localSearch.trim()) {
-      console.log("Recherche soumise immédiatement :", localSearch);
-      startTransition(() => {
-        setSearchTerm(localSearch); // Mise à jour immédiate lors de la soumission
-      });
-    }
-  };
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setLocalSearch(e.target.value);
+    },
+    []
+  );
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setLocalSearch(newValue); // Mise à jour immédiate de l'input
-    debouncedSetSearchTerm(newValue); // Mise à jour debounced dans le contexte
-  };
+  const handleClearSearch = useCallback(() => {
+    setLocalSearch("");
+    startTransition(() => {
+      setSearchTerm("");
+      router.push("/marketplace/products", { scroll: false });
+    });
+  }, [setSearchTerm, router]);
+
+  // Synchroniser localSearch avec searchTerm du contexte
+  useEffect(() => {
+    if (searchTerm !== localSearch) {
+      setLocalSearch(searchTerm || "");
+    }
+  }, [searchTerm]);
 
   return (
     <form onSubmit={handleSearch} className={className}>
       <div className="relative">
         <Input
+          id="search"
           type="text"
           placeholder="Rechercher..."
           value={localSearch}
           onChange={handleInputChange}
-          className="w-full py-1.5 pl-3 pr-8 rounded-full border border-muted focus:border-primary text-sm"
+          className={`w-full py-1.5 pl-3 ${
+            localSearch ? "pr-16" : "pr-8"
+          } rounded-full border focus:border-primary text-sm ${
+            isPending ? "opacity-75" : ""
+          }`}
+          disabled={isPending}
         />
+        {localSearch && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-8 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
+            onClick={handleClearSearch}
+            disabled={isPending}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
         <Button
           type="submit"
-          variant="ghost"
           size="icon"
-          className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
-          disabled={isPending} // Désactiver pendant la transition
+          className="absolute rounded-full right-1 top-1/2 -translate-y-1/2 hover:text-primary"
+          disabled={isPending}
         >
-          <Search className="h-4 w-4" />
+          {isPending ? (
+            <div className="animate-spin h-4 w-4 border-t-2 border-primary rounded-full" />
+          ) : (
+            <Search className="h-4 w-4" />
+          )}
         </Button>
       </div>
     </form>

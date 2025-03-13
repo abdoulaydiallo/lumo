@@ -1,5 +1,5 @@
 {
-  "id": "4a1e120e-5208-4b16-b8a9-672e7112f046",
+  "id": "dc1d97ce-8a8e-46d9-abdd-064757f06db6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2064,6 +2064,21 @@
           "isUnique": false,
           "concurrently": false,
           "method": "btree",
+          "with": {}
+        },
+        "products_search_idx": {
+          "name": "products_search_idx",
+          "columns": [
+            {
+              "expression": "to_tsvector('french', \"name\" || ' ' || COALESCE(\"description\", ''))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
           "with": {}
         }
       },

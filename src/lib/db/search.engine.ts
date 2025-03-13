@@ -152,11 +152,8 @@ function buildWhereConditions(filters: SearchFilters, sort: SortOption, cursor?:
         .replace(/[^a-z0-9\s]/g, "") // Supprimer les caractères spéciaux
         .replace(/\s+/g, " & "); // Remplacer les espaces multiples par " & "
 
-      if (cleanedSearchTerm.length === 0) {
-        console.log("SearchTerm nettoyé est vide, aucune condition de recherche ajoutée.");
-      } else {
+      if (cleanedSearchTerm.length !== 0){
         const searchQuery = cleanedSearchTerm + ":*"; // Ajouter le préfixe pour la recherche
-        console.log("SearchQuery envoyé à to_tsquery:", searchQuery);
 
         const condition = sql`to_tsvector('french', COALESCE(${products.name}, '') || ' ' || COALESCE(${products.description}, '')) 
           @@ to_tsquery('french', ${searchQuery})`;
@@ -261,7 +258,6 @@ function buildWhereConditions(filters: SearchFilters, sort: SortOption, cursor?:
     }
   }
 
-  console.log("Conditions WHERE :", conditions.length > 0 ? conditions.map((c: any) => c.sql).join(" AND ") : "Aucune");
   return conditions;
 }
 
@@ -312,7 +308,6 @@ export async function searchProducts({
   try {
     const cachedResult = await redis.get(cacheKey);
     if (cachedResult) {
-      console.log("Résultat récupéré depuis le cache pour :", { filters, sort, pagination });
       return cachedResult as SearchResult;
     }
 
@@ -320,9 +315,7 @@ export async function searchProducts({
       throw new Error("La limite de pagination doit être positive.");
     }
 
-    console.log("Paramètres de recherche :", { filters, sort, pagination });
     const whereConditions = buildWhereConditions(filters, sort, pagination.cursor);
-    console.log("Conditions WHERE :", whereConditions.length > 0 ? whereConditions.map((c: any) => c.sql).join(" AND ") : "Aucune");
 
     // Calcul du total sans curseur pour refléter tous les produits disponibles
     const totalQueryConditions = buildWhereConditions(filters, sort); // Sans cursor
@@ -331,7 +324,6 @@ export async function searchProducts({
       .from(products)
       .where(and(...totalQueryConditions));
     const total = Number(totalQuery[0]?.count ?? 0);
-    console.log(`Total des produits: ${total}`);
 
     if (total === 0) {
       console.log("Aucun produit trouvé.");
@@ -410,10 +402,8 @@ export async function searchProducts({
       .orderBy(orderBy)
       .limit(pagination.limit);
 
-    console.log("Requête SQL complète :", query.toSQL().sql);
     const productList = await query;
 
-    console.log(`Produits récupérés: ${productList.length}`);
     const lastProduct = productList[productList.length - 1];
     const nextCursor =
       productList.length === pagination.limit && productList.length > 0
@@ -431,12 +421,19 @@ export async function searchProducts({
       },
     };
 
-    await redis.set(cacheKey, result, { ex: 3600 });
-    console.log("Recherche terminée avec succès, mise en cache effectuée.");
+    await redis.set(cacheKey, result, { ex: 300 });
     return result;
   } catch (error: unknown) {
     console.error("Erreur lors de la recherche des produits :", error);
     const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
     throw new Error(`Impossible de rechercher les produits : ${errorMessage}`);
+  }
+}
+
+export async function invalidateProductCache(productId: number) {
+  const cacheKeys: any = await redis.keys(`search:*"id":${productId}*`);
+  if (cacheKeys.length > 0) {
+    await redis.del(cacheKeys);
+    console.log(`Cache invalidé pour ${cacheKeys.length} clés liées au produit ${productId}`);
   }
 }

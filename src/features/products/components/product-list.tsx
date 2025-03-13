@@ -1,14 +1,13 @@
-// @/features/products/components/product-list.tsx
+import { memo } from "react";
 import { Product } from "@/features/products/api/types";
 import ProductCard from "./product-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ProductListProps {
   products: Product[];
-  storeId?: number;
 }
 
-export default function ProductList({ products, storeId }: ProductListProps) {
+function ProductList({ products }: ProductListProps) {
   if (products.length === 0) {
     return (
       <Card>
@@ -16,19 +15,23 @@ export default function ProductList({ products, storeId }: ProductListProps) {
           <CardTitle>Produits</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">
-            Aucun produit disponible pour cette boutique.
-          </p>
+          <p className="text-muted-foreground">Aucun produit disponible.</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} storeId={storeId} />
+        <ProductCard key={product.id} product={product as any} storeId={product.storeId!} />
       ))}
     </div>
   );
 }
+
+export default memo(
+  ProductList,
+  (prevProps, nextProps) =>
+    prevProps.products === nextProps.products
+);

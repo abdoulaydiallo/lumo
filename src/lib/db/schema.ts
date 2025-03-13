@@ -154,7 +154,8 @@ export const products = pgTable(
     index("products_store_id_idx").on(table.storeId),
     index("products_price_idx").on(table.price),
     index("products_stock_status_idx").on(table.stockStatus),
-    index("products_created_at_idx").on(table.createdAt)
+    index("products_created_at_idx").on(table.createdAt),
+    index("products_search_idx").using("gin", sql`to_tsvector('french', ${table.name} || ' ' || COALESCE(${table.description}, ''))`),
   ]
 );
 
@@ -515,7 +516,9 @@ export const promotions = pgTable("promotions", {
   endDate: timestamp("end_date"),
   isExpired: boolean("is_expired").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("promotions_discount_idx").on(table.discountPercentage),
+]);
 
 
 // Table: productPromotions

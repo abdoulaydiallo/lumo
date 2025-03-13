@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   };
 
   const pagination = {
-    limit: Number(searchParams.get("limit")) || 10,
+    limit: Number(searchParams.get("limit")) || 8,
     offset: Number(searchParams.get("offset")) || 0,
   };
 

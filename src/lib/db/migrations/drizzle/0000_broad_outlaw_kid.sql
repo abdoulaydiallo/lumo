@@ -571,4 +571,5 @@ CREATE INDEX "product_variants_product_id_idx" ON "product_variants" USING btree
 CREATE INDEX "products_store_id_idx" ON "products" USING btree ("store_id");--> statement-breakpoint
 CREATE INDEX "products_price_idx" ON "products" USING btree ("price");--> statement-breakpoint
 CREATE INDEX "products_stock_status_idx" ON "products" USING btree ("stock_status");--> statement-breakpoint
-CREATE INDEX "products_created_at_idx" ON "products" USING btree ("created_at");
+CREATE INDEX "products_created_at_idx" ON "products" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "products_search_idx" ON "products" USING gin (to_tsvector('french', "name" || ' ' || COALESCE("description", '')));
