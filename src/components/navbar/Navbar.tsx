@@ -85,7 +85,7 @@ export async function Navbar({ logo = "Marketplace", className }: NavbarProps) {
     >
       <div className="container mx-auto px-4 flex items-center justify-between gap-3 py-4">
         <Link
-          href="/"
+          href="/marketplace/products"
           className="text-lg font-bold text-primary hover:text-primary/90 transition-colors"
         >
           {logo}

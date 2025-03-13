@@ -1,7 +1,6 @@
-// components/search/SearchWrapper.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   SearchFilters,
@@ -13,6 +12,15 @@ import { useSearchContext } from "@/contexts/SearchContext";
 import SearchResults from "./SearchResults";
 import SearchControls from "./SearchControls";
 import { buildQueryString } from "@/lib/utils/search-utils";
+
+// Fonction utilitaire pour débouncer
+function debounce<T extends (...args: any[]) => void>(func: T, wait: number) {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
 
 interface SearchWrapperProps {
   initialData: SearchResult;
@@ -45,14 +53,29 @@ export default function SearchWrapper({
     sortValue: string;
   } | null>(null);
 
+  // Fonction pour mettre à jour l'URL avec debounce
+  const updateURL = useCallback(
+    debounce((newFilters: SearchFilters, newSort: SortOption) => {
+      const queryString = buildQueryString(newFilters, newSort);
+      router.push(`/marketplace/products?${queryString}`, { scroll: false });
+    }, 300), // Délai de 300ms
+    [router]
+  );
+
   useEffect(() => {
+    let mounted = true;
+
     if (searchTerm !== filters.searchTerm) {
       const newFilters = { ...filters, searchTerm };
       setFilters(newFilters);
-      const queryString = buildQueryString(newFilters, sort);
-      router.push(`/marketplace/products?${queryString}`, { scroll: false });
+      updateURL(newFilters, sort);
     }
-  }, [searchTerm, filters, sort, router]);
+
+    // Nettoyage pour éviter les mises à jour sur un composant démonté
+    return () => {
+      mounted = false;
+    };
+  }, [searchTerm, filters, sort, updateURL]);
 
   const handleReset = () => {
     const resetFilters = {
@@ -71,9 +94,10 @@ export default function SearchWrapper({
     router.push("/marketplace/products", { scroll: false });
   };
 
-  const updateURL = (newFilters: SearchFilters, newSort: SortOption) => {
-    const queryString = buildQueryString(newFilters, newSort);
-    router.push(`/marketplace/products?${queryString}`, { scroll: false });
+  const handleApplyFilters = (newFilters: SearchFilters) => {
+    setFilters(newFilters);
+    setCursor(null);
+    updateURL(newFilters, sort);
   };
 
   return (
@@ -85,11 +109,7 @@ export default function SearchWrapper({
           onFiltersChange={setFilters}
           onSortChange={setSort}
           onReset={handleReset}
-          onApplyFilters={(newFilters) => {
-            setFilters(newFilters);
-            setCursor(null);
-            updateURL(newFilters, sort);
-          }}
+          onApplyFilters={handleApplyFilters}
         />
         <SearchResults
           filters={filters}

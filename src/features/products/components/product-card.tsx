@@ -7,13 +7,14 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Star,
-  Heart,
   ChevronLeft,
   ChevronRight,
   ShoppingCart,
   Eye,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
+import { WishlistButton } from "@/features/wishlists/components/WishListButton";
 
 interface ProductCardProps {
   product: {
@@ -48,9 +49,9 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, storeId }: ProductCardProps) {
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const touchStartX = useRef<number | null>(null);
+  const { data: session, status } = useSession();
 
   const images = product.images.map((img) => img.imageUrl);
   const hasPromotion = product.promotions.length > 0;
@@ -180,30 +181,13 @@ export default function ProductCard({ product, storeId }: ProductCardProps) {
               </motion.span>
             )}
           </div>
-          {/* Bouton Wishlist corrigé */}
-          <Button
+          {/* Bouton Wishlist intégré */}
+          <WishlistButton
+            productId={product.id}
+            size="lg" // Optionnel : pour une taille compacte
             variant="ghost"
-            size="icon"
             className="absolute top-2 right-2"
-            onClick={() => setIsWishlisted(!isWishlisted)}
-            aria-label={
-              isWishlisted ? "Retirer des favoris" : "Ajouter aux favoris"
-            }
-          >
-            <motion.div
-              animate={{
-                rotate: isWishlisted ? 360 : 0,
-                scale: isWishlisted ? 1.2 : 1,
-              }}
-              transition={{ duration: 0.3 }}
-            >
-              <Heart
-                className={`w-4 h-4 transition-colors duration-200 ${
-                  isWishlisted ? "text-red-500 fill-red-500" : "text-gray-500"
-                }`}
-              />
-            </motion.div>
-          </Button>
+          />
         </div>
 
         {/* Contenu */}

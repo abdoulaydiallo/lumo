@@ -6,6 +6,7 @@ import { Sun, Moon, Monitor, ShoppingCart, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/UserAvatar";
 import Link from "next/link";
+import { useWishlist } from "@/features/wishlists/hooks/useWishlist"; // Import du hook wishlist
 
 interface UserActionsProps {
   className?: string;
@@ -14,6 +15,13 @@ interface UserActionsProps {
 export function UserActions({ className }: UserActionsProps) {
   const { data: session } = useSession();
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+
+  // Récupérer l'état de la wishlist pour l'utilisateur connecté
+  const userId = session?.user ? Number(session.user.id) : 0;
+  const { wishlist, isLoading } = useWishlist(userId);
+
+  // Vérifier si la wishlist contient des éléments
+  const hasWishlistItems = wishlist?.items && wishlist.items.length > 0;
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as
@@ -89,15 +97,24 @@ export function UserActions({ className }: UserActionsProps) {
       {session?.user ? (
         <>
           <Link
-            href="/user/wishlists"
-            className="p-1.5 hover:bg-muted/20 rounded-full"
+            href="/marketplace/wishlists"
+            className="p-1.5 hover:bg-muted/20 rounded-full relative"
           >
-            <Heart className="h-5 w-5" />
+            <Heart
+              className={`h-5 w-5 transition-colors ${
+                hasWishlistItems && !isLoading
+                  ? "text-red-500 "
+                  : "text-gray-500"
+              }`}
+            />
+            {/* Badge avec le nombre d'éléments si wishlist non vide */}
+            {hasWishlistItems && !isLoading && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                {wishlist.items.length}
+              </span>
+            )}
           </Link>
-          <Link
-            href="/cart"
-            className="p-1.5 hover:bg-muted/20 rounded-full"
-          >
+          <Link href="/cart" className="p-1.5 hover:bg-muted/20 rounded-full">
             <ShoppingCart className="h-5 w-5" />
           </Link>
           <Link href="/user/profile">

@@ -154,3 +154,15 @@ export const { auth, handlers } = NextAuth({
     error: "/error",
   },
 });
+
+export async function getUser() {
+  const session = await auth();
+  if (!session?.user) {
+    return null;
+  }
+  return {
+    id: Number(session.user.id), // Converti en nombre pour correspondre au schema Drizzle
+    email: session.user.email,
+    name: session.user.name,
+  };
+}
