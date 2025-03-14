@@ -657,6 +657,17 @@ export const offlineQueue = pgTable("offline_queue", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-function tsVector(arg0: string) {
-  throw new Error("Function not implemented.");
-}
+export const cartItems = pgTable("cart_items", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  productId: integer("product_id")
+    .references(() => products.id, { onDelete: "cascade" })
+    .notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  variantId: integer("variant_id")
+    .references(() => productVariants.id, { onDelete: "set null" }), // Nullable pour produits sans variante
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});

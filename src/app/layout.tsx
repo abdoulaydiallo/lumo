@@ -6,7 +6,6 @@ import { ThemeProvider } from "@/providers/theme-provider";
 import { auth } from "@/lib/auth";
 import Navbar from "@/components/navbar/Navbar";
 import { Toaster } from "@/components/ui/sonner";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import QueryClientProviderWrapper from "@/providers/query-client-provider";
 import { SearchProvider } from "@/contexts/SearchContext";
 

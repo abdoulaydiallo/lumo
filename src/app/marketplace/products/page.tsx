@@ -1,38 +1,92 @@
-// src/app/marketplace/products/page.tsx
 import { Suspense } from "react";
-import { searchProducts, SortOption } from "@/lib/db/search.engine";
+import {
+  searchProducts,
+  type SortOption,
+  type SearchResult,
+  type SearchFilters,
+} from "@/lib/db/search.engine";
 import LoadingSkeleton from "./components/loading-skeleton";
 import SearchClient from "./components/SearchClient";
 
-export const revalidate = 300; // Cache SSR pendant 5 minutes, aligné avec Redis
-interface ParamsProps {
-  params: Promise<{ [key: string]: string | undefined }>;
+// Typage strict des paramètres de recherche
+interface SearchParams {
+  q?: string;
+  inStock?: string;
+  minPrice?: string;
+  maxPrice?: string;
+  category?: string;
+  minRating?: string;
+  region?: string;
+  sort?: string;
 }
+
+// Options de tri valides
+const VALID_SORT_OPTIONS: SortOption[] = [
+  "relevance",
+  "price_asc",
+  "price_desc",
+  "newest",
+  "popularity",
+  "rating_desc",
+  "stock_desc",
+];
+
+// Pas de mise en cache pour une page dynamique
+export const revalidate = 0;
+
 export default async function SearchPage({
-  params,
-}: ParamsProps) {
-  const searchParams = await params;
-  const filters = {
-    searchTerm: searchParams.q || "",
-    inStock: searchParams.inStock === "false" ? false : true,
-    minPrice: searchParams.minPrice ? Number(searchParams.minPrice) : undefined,
-    maxPrice: searchParams.maxPrice ? Number(searchParams.maxPrice) : undefined,
-    categoryIds: searchParams.category
-      ? searchParams.category.split(",").map(Number)
-      : [],
-    minRating: searchParams.minRating
-      ? Number(searchParams.minRating)
-      : undefined,
-    region: searchParams.region || undefined,
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  // Conversion de searchParams en objet classique (si ce n'est pas déjà un objet)
+  const parsedParams: SearchParams = {
+    q: searchParams.q ?? "",
+    inStock: searchParams.inStock ?? "true",
+    minPrice: searchParams.minPrice ?? undefined,
+    maxPrice: searchParams.maxPrice ?? undefined,
+    category: searchParams.category ?? undefined,
+    minRating: searchParams.minRating ?? undefined,
+    region: searchParams.region ?? undefined,
+    sort: searchParams.sort ?? "relevance",
   };
-  const sort = (searchParams.sort as SortOption) || "relevance";
+
+  // Utilitaire pour convertir une chaîne en nombre valide
+  const toValidNumber = (value?: string): number | undefined => {
+    if (!value || isNaN(Number(value))) return undefined;
+    return Number(value);
+  };
+
+  // Construction des filtres avec validation
+  const filters: SearchFilters = {
+    searchTerm: parsedParams.q || "",
+    inStock: parsedParams.inStock !== "false",
+    minPrice: toValidNumber(parsedParams.minPrice),
+    maxPrice: toValidNumber(parsedParams.maxPrice),
+    categoryIds: parsedParams.category
+      ? parsedParams.category
+          .split(",")
+          .map(Number)
+          .filter((id) => !isNaN(id))
+      : [],
+    minRating: toValidNumber(parsedParams.minRating),
+    region: parsedParams.region,
+  };
+
+  // Validation du tri
+  const sort = VALID_SORT_OPTIONS.includes(parsedParams.sort as SortOption)
+    ? (parsedParams.sort as SortOption)
+    : "relevance";
+
+  // Paramètres initiaux alignés avec SearchParams
   const initialParams = {
     filters,
     sort,
     pagination: { limit: 8, cursor: null },
   };
 
-  const initialData = await searchProducts(initialParams);
+  // Récupération des données avec le type correct
+  const initialData: SearchResult = await searchProducts(initialParams);
 
   return (
     <Suspense fallback={<LoadingSkeleton />}>

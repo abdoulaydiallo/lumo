@@ -1,6 +1,7 @@
 // @/app/api/products/route.ts
 import { NextResponse } from "next/server";
 import { FilterOptions, getProductsWithFiltersAndPagination } from "@/features/products/api/queries";
+import { SortOption } from "@/lib/db/search.engine";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
     maxPrice: searchParams.get("maxPrice") ? Number(searchParams.get("maxPrice")) : undefined,
     searchTerm: searchParams.get("searchTerm") || undefined,
     promotionId: searchParams.get("promotionId") ? Number(searchParams.get("promotionId")) : undefined,
-    sortBy: searchParams.get("sortBy") as any,
+    sortBy: searchParams.get("sortBy") as SortOption || undefined,
     inStock: searchParams.get("inStock") === "true" ? true : undefined,
   };
 

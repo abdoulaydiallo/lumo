@@ -30,7 +30,16 @@ export interface FilterOptions {
   maxPrice?: number;
   searchTerm?: string;
   promotionId?: number;
-  sortBy?: "relevance" | "price_asc" | "price_desc" | "newest" | "popularity";
+  sortBy?: 
+  | "relevance"
+  | "price_asc"
+  | "price_desc"
+  | "newest"
+  | "popularity"
+  | "rating_desc"
+  | "stock_desc"
+  | "discount_desc";
+
   inStock?: boolean;
 }
 
@@ -197,17 +206,7 @@ export async function getProductsWithFiltersAndPagination(
 // Récupérer un produit par ID
 export async function getProductById(productId: number, storeId: number): Promise<Product | null> {
   const [product] = await db
-    .select({
-      id: products.id,
-      storeId: products.storeId,
-      name: products.name,
-      description: products.description,
-      price: products.price,
-      weight: products.weight,
-      stockStatus: products.stockStatus,
-      createdAt: products.createdAt,
-      updatedAt: products.updatedAt,
-    })
+    .select()
     .from(products)
     .where(and(eq(products.id, productId), eq(products.storeId, storeId)))
     .limit(1);
@@ -382,4 +381,12 @@ export async function getAllPromotions(): Promise<Promotion[]> {
       createdAt: promotions.createdAt,
     })
     .from(promotions);
+}
+
+export async function getPromotionsByStoreId(storeId: number): Promise<Promotion[]> {
+  return await db
+    .select()
+    .from(promotions)
+    .where(eq(promotions.storeId, storeId))
+  
 }

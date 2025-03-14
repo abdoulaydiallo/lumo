@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
+import { useWishlist } from "@/features/wishlists/hooks/useWishlist"; // Ajout du hook wishlist
+import { useCart } from "@/features/cart/hooks/useCart"; // Ajout du hook cart
 import { WishlistButton } from "@/features/wishlists/components/WishListButton";
 
 interface ProductCardProps {
@@ -52,6 +54,12 @@ export default function ProductCard({ product, storeId }: ProductCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const touchStartX = useRef<number | null>(null);
   const { data: session, status } = useSession();
+  const userId = Number(session?.user?.id) || 0;
+
+  // Hook pour la wishlist
+  useWishlist(userId);
+  // Hook pour le panier
+  const { addToCart, isAdding } = useCart(userId);
 
   const images = product.images.map((img) => img.imageUrl);
   const hasPromotion = product.promotions.length > 0;
@@ -100,6 +108,12 @@ export default function ProductCard({ product, storeId }: ProductCardProps) {
         />
       </motion.div>
     ));
+
+  // Fonction pour ajouter au panier
+  const handleAddToCart = () => {
+    if (status === "unauthenticated") return;
+    addToCart({ productId: product.id, quantity: 1 });
+  };
 
   return (
     <motion.div
@@ -184,8 +198,6 @@ export default function ProductCard({ product, storeId }: ProductCardProps) {
           {/* Bouton Wishlist intégré */}
           <WishlistButton
             productId={product.id}
-            size="lg" // Optionnel : pour une taille compacte
-            variant="ghost"
             className="absolute top-2 right-2"
           />
         </div>
@@ -255,9 +267,21 @@ export default function ProductCard({ product, storeId }: ProductCardProps) {
               whileTap={{ scale: 0.95 }}
               className="flex-1"
             >
-              <Button variant="default" size="sm" className="w-full text-xs">
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full text-xs"
+                onClick={handleAddToCart}
+                disabled={
+                  isAdding ||
+                  status === "unauthenticated" ||
+                  product.stock.availableStock <= 0
+                }
+              >
                 <ShoppingCart className="w-4 h-4 sm:mr-1" />
-                <span className="hidden sm:inline">Ajouter au panier</span>
+                <span className="hidden sm:inline">
+                  {isAdding ? "Ajout..." : "Ajouter au panier"}
+                </span>
               </Button>
             </motion.div>
             <motion.div

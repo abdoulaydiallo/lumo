@@ -1,12 +1,12 @@
 "use client";
 
-import { Search, X } from "lucide-react";
-import { useDebounce } from "use-debounce";
-import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useSearchContext } from "@/contexts/SearchContext";
 import { useState, useCallback, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSearchContext } from "@/contexts/SearchContext";
+import { Search, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useDebounce } from "use-debounce";
 
 interface SearchBarProps {
   className?: string;
@@ -43,7 +43,7 @@ export function SearchBar({ className }: SearchBarProps) {
     setLocalSearch("");
     startTransition(() => {
       setSearchTerm("");
-      router.push("/marketplace/products", { scroll: false });
+      router.push("/marketplace", { scroll: false });
     });
   }, [setSearchTerm, router]);
 
@@ -58,7 +58,6 @@ export function SearchBar({ className }: SearchBarProps) {
     <form onSubmit={handleSearch} className={className}>
       <div className="relative">
         <Input
-          id="search"
           type="text"
           placeholder="Rechercher..."
           value={localSearch}

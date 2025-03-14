@@ -42,7 +42,7 @@ export default async function PromotionsPage({
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <p className="text-destructive">
-          Vous n'êtes pas autorisé à voir les promotions de cette boutique.
+          Vous n&apos;êtes pas autorisé à voir les promotions de cette boutique.
         </p>
       </div>
     );

@@ -43,7 +43,7 @@ export default function AuthErrorPage() {
             <AlertCircle className="w-12 h-12 text-red-500" />
           </div>
           <CardTitle className="text-2xl text-center">
-            Erreur d'authentification
+            Erreur d&apos;authentification
           </CardTitle>
           <CardDescription className="text-center">
             Un problème est survenu lors de votre connexion
@@ -74,7 +74,7 @@ export default function AuthErrorPage() {
 
           {/* Lien supplémentaire */}
           <div className="text-center text-sm text-muted-foreground">
-            Besoin d'aide ?{" "}
+            Besoin d&apos;aide ?{" "}
             <a
               href="/support"
               className="underline underline-offset-4 hover:text-primary"

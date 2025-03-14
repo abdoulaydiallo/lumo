@@ -56,6 +56,16 @@ CREATE TABLE "authenticators" (
 	CONSTRAINT "authenticators_credential_id_unique" UNIQUE("credential_id")
 );
 --> statement-breakpoint
+CREATE TABLE "cart_items" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"user_id" integer NOT NULL,
+	"product_id" integer NOT NULL,
+	"quantity" integer DEFAULT 1 NOT NULL,
+	"variant_id" integer,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
 CREATE TABLE "driver_payments" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"driver_id" integer,
@@ -505,6 +515,9 @@ ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_users_id_fk" FOREIGN KEY
 ALTER TABLE "addresses" ADD CONSTRAINT "addresses_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "authenticators" ADD CONSTRAINT "authenticators_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_variant_id_product_variants_id_fk" FOREIGN KEY ("variant_id") REFERENCES "public"."product_variants"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "driver_payments" ADD CONSTRAINT "driver_payments_driver_id_drivers_id_fk" FOREIGN KEY ("driver_id") REFERENCES "public"."drivers"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "driver_reviews" ADD CONSTRAINT "driver_reviews_driver_id_drivers_id_fk" FOREIGN KEY ("driver_id") REFERENCES "public"."drivers"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "driver_reviews" ADD CONSTRAINT "driver_reviews_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
@@ -572,4 +585,5 @@ CREATE INDEX "products_store_id_idx" ON "products" USING btree ("store_id");--> 
 CREATE INDEX "products_price_idx" ON "products" USING btree ("price");--> statement-breakpoint
 CREATE INDEX "products_stock_status_idx" ON "products" USING btree ("stock_status");--> statement-breakpoint
 CREATE INDEX "products_created_at_idx" ON "products" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "products_search_idx" ON "products" USING gin (to_tsvector('french', "name" || ' ' || COALESCE("description", '')));
+CREATE INDEX "products_search_idx" ON "products" USING gin (to_tsvector('french', "name" || ' ' || COALESCE("description", '')));--> statement-breakpoint
+CREATE INDEX "promotions_discount_idx" ON "promotions" USING btree ("discount_percentage");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   SearchFilters,
@@ -13,15 +13,6 @@ import SearchResults from "./SearchResults";
 import SearchControls from "./SearchControls";
 import { buildQueryString } from "@/lib/utils/search-utils";
 
-// Fonction utilitaire pour débouncer
-function debounce<T extends (...args: any[]) => void>(func: T, wait: number) {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
-
 interface SearchWrapperProps {
   initialData: SearchResult;
   initialParams: SearchParams;
@@ -33,6 +24,7 @@ export default function SearchWrapper({
 }: SearchWrapperProps) {
   const router = useRouter();
   const { searchTerm, setSearchTerm } = useSearchContext();
+  const isMounted = useRef(false);
 
   const [filters, setFilters] = useState<SearchFilters>(
     initialParams.filters || {
@@ -45,6 +37,7 @@ export default function SearchWrapper({
       region: undefined,
     }
   );
+
   const [sort, setSort] = useState<SortOption>(
     initialParams.sort || "relevance"
   );
@@ -53,52 +46,76 @@ export default function SearchWrapper({
     sortValue: string;
   } | null>(null);
 
-  // Fonction pour mettre à jour l'URL avec debounce
-  const updateURL = useCallback(
-    debounce((newFilters: SearchFilters, newSort: SortOption) => {
-      const queryString = buildQueryString(newFilters, newSort);
-      router.push(`/marketplace/products?${queryString}`, { scroll: false });
-    }, 300), // Délai de 300ms
-    [router]
-  );
-
+  // Gestion du cycle de vie du composant
   useEffect(() => {
-    let mounted = true;
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // Met à jour les filtres uniquement si le composant est monté
+  useEffect(() => {
+    if (!isMounted.current) return;
 
     if (searchTerm !== filters.searchTerm) {
-      const newFilters = { ...filters, searchTerm };
-      setFilters(newFilters);
-      updateURL(newFilters, sort);
+      setFilters((prev) => ({ ...prev, searchTerm }));
+      const queryString = buildQueryString({ ...filters, searchTerm }, sort);
+      router.push(`/marketplace/products?${queryString}`, { scroll: false });
     }
+  }, [searchTerm, sort, filters, router]);
 
-    // Nettoyage pour éviter les mises à jour sur un composant démonté
-    return () => {
-      mounted = false;
-    };
-  }, [searchTerm, filters, sort, updateURL]);
+  // Gestion des changements d'état avec useCallback pour éviter les re-render inutiles
+  const handleFiltersChange = useCallback((newFilters: SearchFilters) => {
+    if (isMounted.current) {
+      setFilters(newFilters);
+    }
+  }, []);
 
-  const handleReset = () => {
-    const resetFilters = {
-      searchTerm: "",
-      inStock: true,
-      minPrice: undefined,
-      maxPrice: undefined,
-      categoryIds: [],
-      minRating: undefined,
-      region: undefined,
-    };
-    setFilters(resetFilters);
-    setSort("relevance");
-    setCursor(null);
-    setSearchTerm("");
-    router.push("/marketplace/products", { scroll: false });
-  };
+  const handleSortChange = useCallback((newSort: SortOption) => {
+    if (isMounted.current) {
+      setSort(newSort);
+    }
+  }, []);
 
-  const handleApplyFilters = (newFilters: SearchFilters) => {
-    setFilters(newFilters);
-    setCursor(null);
-    updateURL(newFilters, sort);
-  };
+  const handleCursorChange = useCallback(
+    (newCursor: { id: string; sortValue: string } | null) => {
+      if (isMounted.current) {
+        setCursor(newCursor);
+      }
+    },
+    []
+  );
+
+  const handleApplyFilters = useCallback(
+    (newFilters: SearchFilters) => {
+      if (isMounted.current) {
+        setFilters(newFilters);
+        setCursor(null);
+        const queryString = buildQueryString(newFilters, sort);
+        router.push(`/marketplace/products?${queryString}`, { scroll: false });
+      }
+    },
+    [sort, router]
+  );
+
+  const handleReset = useCallback(() => {
+    if (isMounted.current) {
+      setFilters({
+        searchTerm: "",
+        inStock: true,
+        minPrice: undefined,
+        maxPrice: undefined,
+        categoryIds: [],
+        minRating: undefined,
+        region: undefined,
+      });
+      setSort("relevance");
+      setCursor(null);
+      setSearchTerm("");
+      router.push("/marketplace/products", { scroll: false });
+    }
+  }, [router, setSearchTerm]);
 
   return (
     <div className="container mx-auto px-4 py-10 sm:px-6 lg:px-8">
@@ -106,8 +123,8 @@ export default function SearchWrapper({
         <SearchControls
           filters={filters}
           sort={sort}
-          onFiltersChange={setFilters}
-          onSortChange={setSort}
+          onFiltersChange={handleFiltersChange}
+          onSortChange={handleSortChange}
           onReset={handleReset}
           onApplyFilters={handleApplyFilters}
         />
@@ -116,7 +133,7 @@ export default function SearchWrapper({
           sort={sort}
           cursor={cursor}
           initialData={initialData}
-          onCursorChange={setCursor}
+          onCursorChange={handleCursorChange}
         />
       </div>
     </div>

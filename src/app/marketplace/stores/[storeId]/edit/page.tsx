@@ -6,14 +6,15 @@ import { notFound } from "next/navigation";
 
 export const revalidate = 600; // ISR : 10 minutes
 
+interface IParams {
+  params: Promise<{ storeId: string }>;
+}
 export default async function EditStorePage({
   params,
-}: {
-  params: { storeId: string };
-}) {
+}: IParams) {
   const resolvedParams = await params;
   const storeId = Number(resolvedParams.storeId);
-  const store: Store | any = await getStoreById(storeId);
+  const store: Store = await getStoreById(storeId);
 
   if (!store) {
     notFound();

@@ -27,7 +27,7 @@ export default async function EditPromotionPage({
     return (
       <div className="container mx-auto px-4 py-6">
         <p className="text-destructive">
-          Vous n’êtes pas autorisé à modifier cette promotion.
+          Vous n&apos;êtes pas autorisé à modifier cette promotion.
         </p>
       </div>
     );

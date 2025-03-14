@@ -17,7 +17,6 @@ interface SearchControlsProps {
 export default function SearchControls({
   filters,
   sort,
-  onFiltersChange,
   onSortChange,
   onReset,
   onApplyFilters,

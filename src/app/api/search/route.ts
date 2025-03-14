@@ -25,7 +25,7 @@ export async function GET(request: Request) {
         id: parsedCursor.id,
         sortValue: parsedCursor.sortValue || sort,
       };
-    } catch (e) {
+    } catch{
       cursor = { id: cursorString, sortValue: sort };
     }
   }

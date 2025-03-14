@@ -3,6 +3,7 @@
 
 import { useMemo } from "react";
 import type { SearchResult } from "@/lib/db/search.engine";
+import Image from "next/image";
 
 interface SearchResultsProps {
   products: SearchResult["products"];
@@ -30,14 +31,14 @@ export default function SearchResults({
       <ul>
         {essentialProducts.map((product) => (
           <li key={product.id}>
-            <img
+            <Image
               src={product.image}
               alt={product.name}
               width={50}
               height={50}
               loading="lazy"
             />
-            <span>{product.name}</span> - <span>{product.price / 100} €</span>
+            <span>{product.name}</span> - <span>{product.price / 100} GNF</span>
           </li>
         ))}
       </ul>

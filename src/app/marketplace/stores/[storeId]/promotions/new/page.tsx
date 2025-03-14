@@ -28,7 +28,7 @@ export default async function NewPromotionPage({
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <p className="text-destructive">
-          Vous n'êtes pas autorisé à créer une promotion.
+          Vous n&apos;êtes pas autorisé à créer une promotion.
         </p>
       </div>
     );

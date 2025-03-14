@@ -24,13 +24,14 @@ import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { AlertCircle, Chrome } from "lucide-react";
+import {  Chrome } from "lucide-react";
 import Link from "next/link";
-import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
 import { loginSchema } from "@/lib/utils/schemas";
 import { MessageAlert } from "../MessageAlert";
 
-interface LoginFormProps extends React.ComponentPropsWithoutRef<"div"> {}
+interface LoginFormProps {
+  className?: string;
+}
 
 export function LoginForm({ className, ...props }: LoginFormProps) {
   const searchParams = useSearchParams();
@@ -168,6 +169,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                 )}
               />
               {error && <MessageAlert type="error" message={error} />}
+              {success && <MessageAlert type="success" message={success} />}
               <Button type="submit" className="w-full" disabled={isPending}>
                 {isPending ? "Connexion en cours..." : "Se connecter"}
               </Button>
@@ -176,7 +178,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
           <div className="text-center text-sm">
             Pas de compte ?{" "}
             <a href="/register" className="underline underline-offset-4">
-              S'inscrire
+              S&apos;inscrire
             </a>
           </div>
         </CardContent>

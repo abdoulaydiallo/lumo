@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner"; // Utilisation de sonner pour les notifications
+import { toast } from "sonner"; // Correction typo: "sonner" -> "sonner"
 
 export function useWishlist(userId: number) {
   const queryClient = useQueryClient();
@@ -10,8 +10,9 @@ export function useWishlist(userId: number) {
     queryKey: ["wishlist", userId],
     queryFn: async () => {
       const response = await fetch(`/api/wishlists?userId=${userId}`);
-      if (!response.ok)
+      if (!response.ok) {
         throw new Error("Erreur lors de la récupération de la wishlist");
+      }
       return response.json();
     },
     enabled: !!userId,
@@ -51,11 +52,20 @@ export function useWishlist(userId: number) {
     onError: () => toast.error("Erreur lors de la suppression de la wishlist"),
   });
 
+  // Fonction pour vérifier si un produit est dans la wishlist
+  const isWishlisted = (productId: number): boolean => {
+    if (!wishlistQuery.data || wishlistQuery.isLoading) return false;
+    return wishlistQuery.data.items.some(
+      (item: any) => item.productId === productId
+    );
+  };
+
   return {
     wishlist: wishlistQuery.data,
     isLoading: wishlistQuery.isLoading,
     addToWishlist: addMutation.mutate,
     removeFromWishlist: removeMutation.mutate,
+    isWishlisted, // Ajout de la fonction isWishlisted
     isAdding: addMutation.isPending,
     isRemoving: removeMutation.isPending,
   };

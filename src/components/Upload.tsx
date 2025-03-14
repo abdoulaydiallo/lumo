@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { MessageAlert } from "@/components/MessageAlert";
+import Image from "next/image";
 
 interface UploadProps {
   onChange: (urls: string[]) => void;
@@ -223,10 +224,12 @@ export function Upload({
                   key={index}
                   className="relative w-full h-24 rounded-lg overflow-hidden"
                 >
-                  <img
+                  <Image
                     src={src}
                     alt={`Image ${index + 1}`}
                     className="w-full h-full object-contain"
+                    height={96}
+                    width={50}
                   />
                   <Button
                     variant="destructive"

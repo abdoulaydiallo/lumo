@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -19,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MessageAlert } from "@/components/MessageAlert";
 import Upload from "@/components/Upload";
 
+// Typage strict de UserProfile
 interface UserProfile {
   id: number;
   email: string;
@@ -38,13 +38,14 @@ export default function ProfilePage() {
     image: "",
     phoneNumber: "",
   });
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [message, setMessage] = useState<{
     text: string;
     type: "success" | "error";
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [imagePreview, setImagePreview] = useState<string | null>(null); // Ajout du state pour imagePreview
 
+  // Effet pour gérer l’authentification et la récupération du profil
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
@@ -56,6 +57,7 @@ export default function ProfilePage() {
     }
   }, [status, router]);
 
+  // Récupération des données du profil
   const fetchProfile = async () => {
     setIsLoading(true);
     try {
@@ -70,8 +72,8 @@ export default function ProfilePage() {
         image: data.image || "",
         phoneNumber: data.phoneNumber || "",
       });
-      setImagePreview(data.image || null);
-    } catch (error) {
+      setImagePreview(data.image || null); // Mise à jour de l’aperçu
+    } catch {
       setMessage({
         text: "Erreur lors de la récupération du profil",
         type: "error",
@@ -81,16 +83,20 @@ export default function ProfilePage() {
     }
   };
 
+  // Gestion des changements dans les inputs
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Gestion de l’upload d’image avec typage correct
   const handleImageUpload = (urls: string[]) => {
-    setFormData((prev) => ({ ...prev, image: urls[0] }));
-    setImagePreview(urls[0]);
+    const imageUrl = urls[0] || ""; // Prend la première URL ou chaîne vide
+    setFormData((prev) => ({ ...prev, image: imageUrl }));
+    setImagePreview(imageUrl);
   };
 
+  // Soumission du formulaire
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
@@ -108,7 +114,8 @@ export default function ProfilePage() {
         throw new Error(error || "Échec de la mise à jour");
       }
 
-      const { user: updatedUser } = await response.json();
+      const { user: updatedUser }: { user: UserProfile } =
+        await response.json();
       setUser(updatedUser);
       setIsEditing(false);
       setMessage({ text: "Profil mis à jour avec succès", type: "success" });
@@ -122,6 +129,7 @@ export default function ProfilePage() {
     }
   };
 
+  // Rendu pendant le chargement
   if (isLoading || status === "loading") {
     return (
       <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -149,6 +157,7 @@ export default function ProfilePage() {
     return null; // Redirection gérée par useEffect
   }
 
+  // Calcul des initiales
   const initials = (user.name || "U")
     .split(" ")
     .map((n) => n[0])
@@ -160,7 +169,7 @@ export default function ProfilePage() {
       <Card className="max-w-2xl mx-auto shadow-sm rounded-xl transition-all duration-300 hover:shadow-md">
         <CardHeader className="border-b">
           <CardTitle className="text-2xl font-bold text-primary">
-            Profile
+            Profil
           </CardTitle>
           <CardDescription className="text-muted-foreground mb-4">
             Gérez vos informations personnelles
@@ -171,7 +180,7 @@ export default function ProfilePage() {
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
             <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-2 border-primary/20 transition-transform duration-300 hover:scale-105">
               <AvatarImage
-                src={user.image || ""}
+                src={imagePreview || user.image || ""}
                 alt={user.name || "Utilisateur"}
               />
               <AvatarFallback className="text-lg">{initials}</AvatarFallback>
@@ -202,9 +211,9 @@ export default function ProfilePage() {
               </div>
               <div className="space-y-2">
                 <Upload
-                  onChange={(urls) => handleImageUpload(urls[0] as any)} // Prend la première URL
+                  onChange={handleImageUpload} // Typage corrigé, plus de "as any"
                   maxSize={5}
-                  maxFiles={1} // Limite à 1 pour profileImageUrl
+                  maxFiles={1}
                   className="w-full"
                 />
               </div>

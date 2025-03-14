@@ -1,10 +1,9 @@
 // @/app/marketplace/stores/[storeId]/products/[productId]/edit/page.tsx
 import { Suspense } from "react";
-import { getProductById } from "@/features/products/api/queries";
+import { getProductById, getPromotionsByStoreId } from "@/features/products/api/queries";
 import { getStoreById } from "@/features/stores/api/queries";
 import {
   getAllCategories,
-  getPromotionsByStoreId,
 } from "@/features/products/api/queries";
 import ProductForm from "@/features/products/components/create-product-form";
 import { notFound } from "next/navigation";
@@ -38,7 +37,7 @@ export default async function EditProductPage({
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <p className="text-destructive">
-          Vous n'êtes pas autorisé à modifier ce produit.
+          Vous n&apos;êtes pas autorisé à modifier ce produit.
         </p>
       </div>
     );
@@ -60,7 +59,7 @@ export default async function EditProductPage({
         <ProductForm
           storeId={storeId}
           categories={categories}
-          promotions={promotions as any}
+          promotions={promotions}
           initialData={product}
         />
       </div>

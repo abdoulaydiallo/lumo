@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +30,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { CheckCircle2, Chrome, TriangleAlert } from "lucide-react";
+import {Chrome } from "lucide-react";
 import { registerSchema } from "@/lib/utils/schemas";
 import { MessageAlert } from "../MessageAlert";
 import Link from "next/link";
@@ -39,7 +38,6 @@ import Link from "next/link";
 interface RegisterFormProps extends React.ComponentPropsWithoutRef<"div"> {}
 
 export function RegisterForm({ className, ...props }: RegisterFormProps) {
-  const router = useRouter();
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();

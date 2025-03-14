@@ -45,7 +45,7 @@ export default function ProductImageCarousel({
   return (
     <div className={cn("relative w-full space-y-4", className)}>
       {/* Image principale */}
-      <div className="relative w-full border h-64 sm:h-72 md:h-96 overflow-hidden rounded-lg shadow-sm">
+      <div className="relative w-full h-64 sm:h-72 md:h-96 overflow-hidden rounded-lg shadow-sm">
         <Image
           src={images[currentIndex].imageUrl}
           alt={`Image ${currentIndex + 1} of ${images.length}`}

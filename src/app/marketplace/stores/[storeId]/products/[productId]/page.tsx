@@ -1,12 +1,10 @@
-// @/app/marketplace/stores/[storeId]/products/[productId]/page.tsx
 import { Suspense } from "react";
 import { getProductById } from "@/features/products/api/queries";
 import ProductDetails from "@/features/products/components/product-details";
 import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"; // Vérifie cet import
 import Link from "next/link";
-import { auth } from "@/lib/auth"; // Import pour vérifier l'utilisateur
-import Heading from "@/components/Heading";
+import { auth } from "@/lib/auth";
 import { getStoreById } from "@/features/stores/api/queries";
 
 interface ProductPageProps {
@@ -22,8 +20,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const product = await getProductById(productId, storeId);
 
   if (!product || !store) return notFound();
+  console.log(product)
 
-  // Vérification côté serveur si l'utilisateur est le propriétaire
   const session = await auth();
   const isOwner =
     session?.user?.role === "store" &&
@@ -31,7 +29,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   return (
     <Suspense fallback={<ProductDetailsSkeleton />}>
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link href={`/marketplace/stores/${storeId}/products`}>

@@ -1,12 +1,12 @@
 // navbar.tsx (Server Component)
 import { cn } from "@/lib/utils";
-import Link from "next/link";
 import { NavbarProps, NavLink } from "./types";
 import { SearchBar } from "./SearchBar";
 import { UserActions } from "./UserActions";
 import { MobileMenu } from "./MobileMenu";
 import { auth } from "@/lib/auth";
 import { getStoreByUserId } from "@/features/stores/api/queries";
+import { Logo } from "./Logo";
 
 export async function Navbar({ logo = "Marketplace", className }: NavbarProps) {
   // Récupération de la session côté serveur
@@ -84,12 +84,7 @@ export async function Navbar({ logo = "Marketplace", className }: NavbarProps) {
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between gap-3 py-4">
-        <Link
-          href="/marketplace/products"
-          className="text-lg font-bold text-primary hover:text-primary/90 transition-colors"
-        >
-          {logo}
-        </Link>
+        <Logo title="Marketplace" />
         <SearchBar className="flex-1 max-w-3xl hidden md:block" />
         <UserActions
           className="items-center space-x-2 hidden md:flex"

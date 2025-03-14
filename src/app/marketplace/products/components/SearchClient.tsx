@@ -1,4 +1,3 @@
-// components/search/SearchClient.tsx
 "use client";
 
 import SearchWrapper from "@/components/search/SearchWrapper";

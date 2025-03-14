@@ -1,5 +1,4 @@
-// components/search/SearchResults.tsx
-import { useMemo, useRef, useEffect, useCallback, useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearch } from "@/features/search/hooks/use-search";
 import ProductList from "@/features/products/components/product-list";
 import {
@@ -24,33 +23,39 @@ export default function SearchResults({
   initialData,
   onCursorChange,
 }: SearchResultsProps) {
-  const memoizedFilters = useMemo(() => filters, [filters]);
   const [hasMore, setHasMore] = useState(true);
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const lastItemRef = useRef<HTMLDivElement>(null);
   const observer = useRef<IntersectionObserver | null>(null);
 
   const { data, isLoading, error } = useSearch(
-    { filters: memoizedFilters, sort, pagination: { limit: 8, cursor } },
+    { filters, sort, pagination: { limit: 8, cursor } },
     initialData
   );
+
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Gestion de l'état de montage
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false); // Nettoyage lorsque le composant est démonté
+  }, []);
+
+  // Logique de gestion de l'état de "hasMore" en fonction des données
+  useEffect(() => {
+    if (isMounted && data) {
+      if (!data.nextCursor) {
+        setHasMore(false); // Si il n'y a pas de prochain curseur, on indique qu'il n'y a plus de données à charger
+      } else {
+        setHasMore(true);
+      }
+    }
+  }, [data, isMounted]);
 
   const handleObserver = useCallback(
     (entries: IntersectionObserverEntry[]) => {
       const target = entries[0];
       if (target.isIntersecting && hasMore && !isLoading && data?.nextCursor) {
-        const previousScrollPosition = window.scrollY;
         onCursorChange(data.nextCursor);
-        setTimeout(() => {
-          if (lastItemRef.current) {
-            lastItemRef.current.scrollIntoView({ behavior: "smooth" });
-          } else {
-            window.scrollTo({
-              top: previousScrollPosition + 200,
-              behavior: "smooth",
-            });
-          }
-        }, 100);
       }
     },
     [data, isLoading, hasMore, onCursorChange]
@@ -64,13 +69,9 @@ export default function SearchResults({
     };
     observer.current = new IntersectionObserver(handleObserver, options);
     if (loadMoreRef.current) observer.current.observe(loadMoreRef.current);
-    return () => observer.current?.disconnect();
-  }, [handleObserver]);
 
-  useEffect(() => {
-    if (data && !data.nextCursor) setHasMore(false);
-    else setHasMore(true);
-  }, [data]);
+    return () => observer.current?.disconnect(); // Nettoyage de l'observateur à la sortie
+  }, [handleObserver]);
 
   return (
     <div className="flex-1">
@@ -82,8 +83,8 @@ export default function SearchResults({
         <p className="text-center text-destructive py-8">{error}</p>
       ) : data && data.products?.length > 0 ? (
         <div className="py-4">
-          <ProductList products={data.products as any} />
-          <div ref={lastItemRef} className="h-1" />
+          <ProductList products={data.products} />
+          <div ref={loadMoreRef} className="h-1" />
           {hasMore && (
             <div ref={loadMoreRef} className="py-8 container mx-auto">
               <LoadingSkeleton />

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/UserAvatar";
 import Link from "next/link";
 import { useWishlist } from "@/features/wishlists/hooks/useWishlist"; // Import du hook wishlist
+import { useCart } from "@/features/cart/hooks/useCart";
 
 interface UserActionsProps {
   className?: string;
@@ -19,9 +20,11 @@ export function UserActions({ className }: UserActionsProps) {
   // Récupérer l'état de la wishlist pour l'utilisateur connecté
   const userId = session?.user ? Number(session.user.id) : 0;
   const { wishlist, isLoading } = useWishlist(userId);
+  const { cart, isLoading: isCartLoading } = useCart(userId);
 
   // Vérifier si la wishlist contient des éléments
   const hasWishlistItems = wishlist?.items && wishlist.items.length > 0;
+  const hasCartItems = cart?.items?.length > 0;
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as
@@ -114,8 +117,22 @@ export function UserActions({ className }: UserActionsProps) {
               </span>
             )}
           </Link>
-          <Link href="/cart" className="p-1.5 hover:bg-muted/20 rounded-full">
-            <ShoppingCart className="h-5 w-5" />
+          <Link
+            href="/cart"
+            className="p-1.5 hover:bg-muted/20 rounded-full relative"
+          >
+            <ShoppingCart
+              className={`h-5 w-5 transition-colors ${
+                hasCartItems && !isCartLoading
+                  ? "text-blue-500 fill-blue-500"
+                  : "text-gray-500"
+              }`}
+            />
+            {hasCartItems && !isCartLoading && (
+              <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                {cart.items.length}
+              </span>
+            )}
           </Link>
           <Link href="/user/profile">
             <UserAvatar className="h-7 w-7" />
