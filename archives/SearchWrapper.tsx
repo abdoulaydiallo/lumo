@@ -25,7 +25,6 @@ export default function SearchWrapper({
   const router = useRouter();
   const { searchTerm, setSearchTerm } = useSearchContext();
   const isMounted = useRef(false);
-  const rafId = useRef<number | null>(null); // Pour annuler requestAnimationFrame
 
   const [filters, setFilters] = useState<SearchFilters>(
     initialParams.filters || {
@@ -47,40 +46,34 @@ export default function SearchWrapper({
     sortValue: string;
   } | null>(null);
 
+  // Gestion centralisée avec un seul useEffect
   useEffect(() => {
+    // Marquer le composant comme monté au premier rendu
     if (!isMounted.current) {
       isMounted.current = true;
-      // Synchroniser searchTerm avec initialParams au premier montage
-      if (
-        initialParams.filters?.searchTerm &&
-        searchTerm !== initialParams.filters.searchTerm
-      ) {
-        setSearchTerm(initialParams.filters.searchTerm);
-      }
-      return;
+      return; // Retourner immédiatement pour éviter toute mise à jour au premier rendu
     }
 
+    // Synchronisation de searchTerm uniquement après montage
     if (searchTerm !== filters.searchTerm) {
       const newFilters = { ...filters, searchTerm };
       setFilters(newFilters);
       const queryString = buildQueryString(newFilters, sort);
-      if (rafId.current) cancelAnimationFrame(rafId.current); // Annuler toute mise à jour précédente
-      rafId.current = requestAnimationFrame(() => {
+      // Ajouter un léger délai pour s'assurer que le montage est complet
+      setTimeout(() => {
         if (isMounted.current) {
-          router.push(`/marketplace/products?${queryString}`, {
-            scroll: false,
-          });
+          router.push(`/marketplace/products?${queryString}`, { scroll: false });
         }
-        rafId.current = null;
-      });
+      }, 0);
     }
 
+    // Cleanup au démontage
     return () => {
       isMounted.current = false;
-      if (rafId.current) cancelAnimationFrame(rafId.current); // Nettoyer au démontage
     };
-  }, [searchTerm, filters, sort, router, initialParams, setSearchTerm]);
+  }, [searchTerm, filters, sort, router]);
 
+  // Gestion des changements d'état avec useCallback pour éviter les re-render inutiles
   const handleFiltersChange = useCallback((newFilters: SearchFilters) => {
     if (isMounted.current) {
       setFilters(newFilters);
@@ -108,15 +101,7 @@ export default function SearchWrapper({
         setFilters(newFilters);
         setCursor(null);
         const queryString = buildQueryString(newFilters, sort);
-        if (rafId.current) cancelAnimationFrame(rafId.current);
-        rafId.current = requestAnimationFrame(() => {
-          if (isMounted.current) {
-            router.push(`/marketplace/products?${queryString}`, {
-              scroll: false,
-            });
-          }
-          rafId.current = null;
-        });
+        router.push(`/marketplace/products?${queryString}`, { scroll: false });
       }
     },
     [sort, router]

@@ -98,7 +98,7 @@ export function CartList() {
       >
         Votre panier est vide.{" "}
         <Button variant="link" asChild className="p-0">
-          <Link href="/marketplace">Ajouter des produits</Link>
+          <Link href="/marketplace/products">Ajouter des produits</Link>
         </Button>
       </motion.div>
     );

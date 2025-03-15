@@ -9,9 +9,18 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { WishlistButton } from "./WishListButton";
+import { useRouter } from "next/navigation";
+import { startTransition, useCallback } from "react";
 
 export function WishlistList() {
   const { data: session, status } = useSession();
+  const router = useRouter()
+  
+  const handleClearSearch = useCallback(() => {
+    startTransition(() => {
+      router.push("/marketplace/products");
+    });
+  }, [router]);
 
   if (status === "loading") {
     return (
@@ -63,8 +72,8 @@ export function WishlistList() {
         className="text-center py-8 text-muted-foreground"
       >
         Votre wishlist est vide.{" "}
-        <Button variant="link" asChild className="p-0">
-          <Link href="/marketplace/products">Ajouter des produits</Link>
+        <Button variant="link" onClick={handleClearSearch} className="p-0">
+         Ajouter des produits
         </Button>
       </motion.div>
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, startTransition, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Sun, Moon, Monitor, ShoppingCart, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import Link from "next/link";
 import { useWishlist } from "@/features/wishlists/hooks/useWishlist"; // Import du hook wishlist
 import { useCart } from "@/features/cart/hooks/useCart";
+import { useRouter } from "next/router";
 
 interface UserActionsProps {
   className?: string;
@@ -79,6 +80,8 @@ export function UserActions({ className }: UserActionsProps) {
       return newTheme;
     });
   };
+
+
 
   return (
     <div className={className}>

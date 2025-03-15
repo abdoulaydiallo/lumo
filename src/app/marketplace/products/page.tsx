@@ -33,12 +33,13 @@ const VALID_SORT_OPTIONS: SortOption[] = [
 
 // Pas de mise en cache pour une page dynamique
 export const revalidate = 0;
-
+interface IParams {
+  params: Promise<SearchParams>;
+}
 export default async function SearchPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
+  params,
+}: IParams) {
+  const searchParams = await params;
   // Conversion de searchParams en objet classique (si ce n'est pas déjà un objet)
   const parsedParams: SearchParams = {
     q: searchParams.q ?? "",

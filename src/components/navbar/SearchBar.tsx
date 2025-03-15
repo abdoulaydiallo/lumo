@@ -43,7 +43,7 @@ export function SearchBar({ className }: SearchBarProps) {
     setLocalSearch("");
     startTransition(() => {
       setSearchTerm("");
-      router.push("/marketplace", { scroll: false });
+      router.push("/marketplace/products", { scroll: false });
     });
   }, [setSearchTerm, router]);
 
