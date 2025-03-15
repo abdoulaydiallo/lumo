@@ -24,8 +24,8 @@ export default function SearchWrapper({
 }: SearchWrapperProps) {
   const router = useRouter();
   const { searchTerm, setSearchTerm } = useSearchContext();
-  const isMounted = useRef(false);
-  const rafId = useRef<number | null>(null); // Pour annuler requestAnimationFrame
+  const isMounted = useRef(false); // Suivi du montage
+  const rafId = useRef<number | null>(null); // Pour nettoyer requestAnimationFrame
 
   const [filters, setFilters] = useState<SearchFilters>(
     initialParams.filters || {
@@ -38,7 +38,6 @@ export default function SearchWrapper({
       region: undefined,
     }
   );
-
   const [sort, setSort] = useState<SortOption>(
     initialParams.sort || "relevance"
   );
@@ -47,68 +46,30 @@ export default function SearchWrapper({
     sortValue: string;
   } | null>(null);
 
+  // Gestion du montage et démontage
   useEffect(() => {
-    if (!isMounted.current) {
-      isMounted.current = true;
-      // Synchroniser searchTerm avec initialParams au premier montage
-      if (
-        initialParams.filters?.searchTerm &&
-        searchTerm !== initialParams.filters.searchTerm
-      ) {
-        setSearchTerm(initialParams.filters.searchTerm);
-      }
-      return;
+    isMounted.current = true;
+    if (
+      initialParams.filters?.searchTerm &&
+      searchTerm !== initialParams.filters.searchTerm
+    ) {
+      setSearchTerm(initialParams.filters.searchTerm);
     }
+    return () => {
+      isMounted.current = false;
+      if (rafId.current) cancelAnimationFrame(rafId.current); // Nettoyage des animations en attente
+    };
+  }, [initialParams, setSearchTerm]);
+
+  // Synchronisation de searchTerm avec les filtres et mise à jour de l'URL
+  useEffect(() => {
+    if (!isMounted.current) return;
 
     if (searchTerm !== filters.searchTerm) {
       const newFilters = { ...filters, searchTerm };
-      setFilters(newFilters);
-      const queryString = buildQueryString(newFilters, sort);
-      if (rafId.current) cancelAnimationFrame(rafId.current); // Annuler toute mise à jour précédente
-      rafId.current = requestAnimationFrame(() => {
-        if (isMounted.current) {
-          router.push(`/marketplace/products?${queryString}`, {
-            scroll: false,
-          });
-        }
-        rafId.current = null;
-      });
-    }
-
-    return () => {
-      isMounted.current = false;
-      if (rafId.current) cancelAnimationFrame(rafId.current); // Nettoyer au démontage
-    };
-  }, [searchTerm, filters, sort, router, initialParams, setSearchTerm]);
-
-  const handleFiltersChange = useCallback((newFilters: SearchFilters) => {
-    if (isMounted.current) {
-      setFilters(newFilters);
-    }
-  }, []);
-
-  const handleSortChange = useCallback((newSort: SortOption) => {
-    if (isMounted.current) {
-      setSort(newSort);
-    }
-  }, []);
-
-  const handleCursorChange = useCallback(
-    (newCursor: { id: string; sortValue: string } | null) => {
-      if (isMounted.current) {
-        setCursor(newCursor);
-      }
-    },
-    []
-  );
-
-  const handleApplyFilters = useCallback(
-    (newFilters: SearchFilters) => {
       if (isMounted.current) {
         setFilters(newFilters);
-        setCursor(null);
         const queryString = buildQueryString(newFilters, sort);
-        if (rafId.current) cancelAnimationFrame(rafId.current);
         rafId.current = requestAnimationFrame(() => {
           if (isMounted.current) {
             router.push(`/marketplace/products?${queryString}`, {
@@ -118,26 +79,70 @@ export default function SearchWrapper({
           rafId.current = null;
         });
       }
+    }
+  }, [searchTerm, filters, sort, router]);
+
+  // Callback sécurisé pour changer les filtres
+  const handleFiltersChange = useCallback((newFilters: SearchFilters) => {
+    if (isMounted.current) {
+      setFilters(newFilters);
+    }
+  }, []);
+
+  // Callback sécurisé pour changer le tri
+  const handleSortChange = useCallback((newSort: SortOption) => {
+    if (isMounted.current) {
+      setSort(newSort);
+    }
+  }, []);
+
+  // Callback sécurisé pour changer le curseur
+  const handleCursorChange = useCallback(
+    (newCursor: { id: string; sortValue: string } | null) => {
+      if (isMounted.current) {
+        setCursor(newCursor);
+      }
+    },
+    []
+  );
+
+  // Appliquer les filtres et mettre à jour l'URL
+  const handleApplyFilters = useCallback(
+    (newFilters: SearchFilters) => {
+      if (!isMounted.current) return;
+
+      setFilters(newFilters);
+      setCursor(null);
+      const queryString = buildQueryString(newFilters, sort);
+      rafId.current = requestAnimationFrame(() => {
+        if (isMounted.current) {
+          router.push(`/marketplace/products?${queryString}`, {
+            scroll: false,
+          });
+        }
+        rafId.current = null;
+      });
     },
     [sort, router]
   );
 
+  // Réinitialiser les filtres et l'URL
   const handleReset = useCallback(() => {
-    if (isMounted.current) {
-      setFilters({
-        searchTerm: "",
-        inStock: true,
-        minPrice: undefined,
-        maxPrice: undefined,
-        categoryIds: [],
-        minRating: undefined,
-        region: undefined,
-      });
-      setSort("relevance");
-      setCursor(null);
-      setSearchTerm("");
-      router.push("/marketplace/products", { scroll: false });
-    }
+    if (!isMounted.current) return;
+
+    setFilters({
+      searchTerm: "",
+      inStock: true,
+      minPrice: undefined,
+      maxPrice: undefined,
+      categoryIds: [],
+      minRating: undefined,
+      region: undefined,
+    });
+    setSort("relevance");
+    setCursor(null);
+    setSearchTerm("");
+    router.push("/marketplace/products", { scroll: false });
   }, [router, setSearchTerm]);
 
   return (
