@@ -8,7 +8,7 @@ import { auth } from "@/lib/auth";
 import { getStoreByUserId } from "@/features/stores/api/queries";
 import { Logo } from "./Logo";
 
-export async function Navbar({ logo = "Marketplace", className }: NavbarProps) {
+export async function Navbar({ logo = "Lumo", className }: NavbarProps) {
   // Récupération de la session côté serveur
   const session = await auth();
   const store = session?.user?.id ? await getStoreByUserId(session.user.id) : null;
@@ -84,7 +84,7 @@ export async function Navbar({ logo = "Marketplace", className }: NavbarProps) {
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between gap-3 py-4">
-        <Logo title="Marketplace" />
+        <Logo title="Lumo" />
         <SearchBar className="flex-1 max-w-3xl hidden md:block" />
         <UserActions
           className="items-center space-x-2 hidden md:flex"
