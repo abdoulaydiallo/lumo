@@ -34,6 +34,7 @@ import {Chrome } from "lucide-react";
 import { registerSchema } from "@/lib/utils/schemas";
 import { MessageAlert } from "../MessageAlert";
 import Link from "next/link";
+import React from "react";
 
 interface RegisterFormProps extends React.ComponentPropsWithoutRef<"div"> {}
 

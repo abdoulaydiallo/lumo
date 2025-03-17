@@ -34,7 +34,7 @@ export default function StoreCard({ store, className }: StoreCardProps) {
           />
         ) : (
           <div className="w-full h-32 bg-muted rounded-t-lg flex items-center justify-center">
-            <span className="text-muted-foreground">Pas d'image</span>
+            <span className="text-muted-foreground">Pas d&apos;image</span>
           </div>
         )}
       </CardHeader>

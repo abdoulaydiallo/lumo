@@ -2,16 +2,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Promotion } from "../api/types";
 
 export function usePromotions(
   storeId: number,
   page: number = 1,
   filter: "active" | "inactive" | "expired" | "all" = "all",
   limit: number = 10,
-  initialData?: { promotions: any[]; total: number }
+  initialData?: { promotions: Promotion[]; total: number }
 ) {
-  const offset = (page - 1) * limit;
-
   return useQuery({
     queryKey: ["promotions", storeId, page, filter],
     queryFn: async () => {

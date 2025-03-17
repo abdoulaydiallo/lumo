@@ -9,10 +9,9 @@ import {
   productCategoryRelation,
   productPromotions,
   productStocks,
-  productCategories,
-  promotions,
+  productCategories
 } from "@/lib/db/schema";
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export async function createProduct(storeId: number, formData: FormData) {
   const name = formData.get("name") as string;

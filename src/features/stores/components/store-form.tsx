@@ -28,7 +28,6 @@ import { useState, useTransition } from "react";
 import { MessageAlert } from "@/components/MessageAlert";
 import { Upload } from "@/components/Upload";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 
 const storeSchema = z.object({
   name: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),
@@ -137,7 +136,7 @@ export default function StoreForm() {
                   name="activityType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Type d'activité</FormLabel>
+                      <FormLabel>Type d&apos;activité</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}

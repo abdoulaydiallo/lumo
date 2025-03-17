@@ -34,8 +34,8 @@ const promotionSchema = z
       .number({ invalid_type_error: "Le pourcentage doit être un nombre." })
       .min(0, "Le pourcentage doit être supérieur ou égal à 0.")
       .max(100, "Le pourcentage ne peut pas dépasser 100."),
-    startDate: z.string().optional(),
-    endDate: z.string().optional(),
+    startDate: z.string(),
+    endDate: z.string(),
   })
   .refine(
     (data) => {
@@ -55,8 +55,13 @@ type PromotionFormValues = z.infer<typeof promotionSchema>;
 
 interface PromotionFormProps {
   storeId: number;
-  promotionId?: number; // Optionnel pour création
-  initialData?: Partial<PromotionFormValues>;
+  promotionId?: number;
+  initialData?: {
+    code: string | null;
+    discountPercentage: number;
+    startDate: string | null;
+    endDate: string | null;
+};
 }
 
 export default function PromotionForm({

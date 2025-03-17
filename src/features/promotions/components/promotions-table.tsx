@@ -50,11 +50,11 @@ import {
 
 interface Promotion {
   id: number;
-  code: string;
+  code: string | null;
   discountPercentage: number;
   startDate: Date | null;
   endDate: Date | null;
-  createdAt: Date;
+  createdAt: Date | null;
   isExpired: boolean;
 }
 
@@ -169,7 +169,8 @@ export default function PromotionsTable({
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {new Date(promo.createdAt).toLocaleDateString("fr-FR")}
+                    {promo?.createdAt &&
+                      new Date(promo.createdAt).toLocaleDateString("fr-FR")}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

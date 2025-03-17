@@ -39,11 +39,9 @@ export default function StoreOwnerActions({
       await deleteStore(storeId);
       setIsDeleteDialogOpen(false);
       router.push("/marketplace/stores");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erreur lors de la suppression:", error);
-      setError(
-        error.message || "Une erreur est survenue lors de la suppression."
-      );
+      setError("Une erreur est survenue lors de la suppression.");
     }
   };
 
@@ -87,7 +85,7 @@ export default function StoreOwnerActions({
           <DialogHeader>
             <DialogTitle>Supprimer la boutique</DialogTitle>
             <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer "{storeName}" ? Cette action
+              Êtes-vous sûr de vouloir supprimer {storeName} ? Cette action
               est irréversible.
               {error && <p className="text-destructive mt-2">{error}</p>}
             </DialogDescription>

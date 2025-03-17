@@ -78,7 +78,7 @@ export default function OpeningHoursManager({
     <Card className="border border-border rounded-lg bg-background">
       <CardContent className="p-6 space-y-6">
         <h2 className="text-lg font-medium text-foreground">
-          Horaires d'ouverture
+          Horaires d&apos;ouverture
         </h2>
         <div className="space-y-4">
           {daysOfWeek.map((day) => (

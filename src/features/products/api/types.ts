@@ -15,7 +15,7 @@ export type Product = InferSelectModel<typeof products> & {
   images: ProductImage[];
   variants: ProductVariant[];
   categories: ProductCategory[];
-  promotions: ProductPromotion[] | any;
+  promotions: ProductPromotion[];
   stock?: ProductStock;
 };
 

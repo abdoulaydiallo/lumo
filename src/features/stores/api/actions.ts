@@ -7,9 +7,9 @@ import { stores } from "@/lib/db/schema";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getStoreByUserId } from "./queries";
-import { desc, eq, is } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { Store } from "./types";
-import { act } from "react";
+
 
 const storeSchema = z.object({
   name: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),

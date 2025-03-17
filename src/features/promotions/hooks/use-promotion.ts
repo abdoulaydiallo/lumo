@@ -1,9 +1,10 @@
 // @/features/promotions/hooks/usePromotion.ts
 "use client";
 
+import { Promotion } from "@/features/products/api/types";
 import { useQuery } from "@tanstack/react-query";
 
-export function usePromotion(promotionId: number, storeId: number, initialData?: any) {
+export function usePromotion(promotionId: number, storeId: number, initialData?: Promotion) {
   return useQuery({
     queryKey: ["promotion", promotionId, storeId],
     queryFn: async () => {

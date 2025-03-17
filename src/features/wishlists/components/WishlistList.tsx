@@ -94,7 +94,7 @@ export function WishlistList() {
           </CardHeader>
           <CardContent className="p-4 space-y-4">
             <ul className="space-y-4">
-              {wishlist.items.map((item: any, index: number) => (
+              {wishlist.items.map((item, index: number) => (
                 <motion.li
                   key={item.id}
                   initial={{ opacity: 0, y: 20 }}

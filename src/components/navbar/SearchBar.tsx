@@ -52,7 +52,7 @@ export function SearchBar({ className }: SearchBarProps) {
     if (searchTerm !== localSearch) {
       setLocalSearch(searchTerm || "");
     }
-  }, [searchTerm]);
+  }, [searchTerm, localSearch]);
 
   return (
     <form onSubmit={handleSearch} className={className}>

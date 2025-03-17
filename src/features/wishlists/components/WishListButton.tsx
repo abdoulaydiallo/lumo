@@ -75,7 +75,7 @@ export function WishlistButton({
   } = useWishlist(userId);
 
   const isInWishlist = wishlist?.items.some(
-    (item: any) => item.productId === productId
+    (item) => item.productId === productId
   );
 
   const handleClick = () => {

@@ -124,9 +124,9 @@ export default function EditStoreForm({ store }: EditStoreFormProps) {
           type: "success",
         });
         form.reset(data);
-      } catch (error: any) {
+      } catch (error) {
         const errorMessage =
-          error.message || "Erreur lors de la mise à jour de la boutique";
+          "Erreur lors de la mise à jour de la boutique";
         console.error("Erreur dans onSubmit:", error);
         setMessage({ text: errorMessage, type: "error" });
       }
@@ -191,7 +191,7 @@ export default function EditStoreForm({ store }: EditStoreFormProps) {
                   name="activityType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Type d'activité</FormLabel>
+                      <FormLabel>Type d&apos;activité</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}

@@ -39,10 +39,10 @@ export default function ProductOwnerActions({
     try {
       setIsDeleteDialogOpen(false);
       router.refresh(); // Rafraîchir la page pour mettre à jour la liste
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erreur lors de la suppression:", error);
       setError(
-        error.message || "Une erreur est survenue lors de la suppression."
+       "Une erreur est survenue lors de la suppression."
       );
     }
   };
@@ -76,7 +76,7 @@ export default function ProductOwnerActions({
           <DialogHeader>
             <DialogTitle>Supprimer le produit</DialogTitle>
             <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer "{productName}" ? Cette action
+              Êtes-vous sûr de vouloir supprimer &quot;{productName}&quot; ? Cette action
               est irréversible.
               {error && <p className="text-destructive mt-2">{error}</p>}
             </DialogDescription>

@@ -1,10 +1,8 @@
 // @/features/stores/components/store-details.tsx
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import Link from "next/link";
-import { FullStore, Store } from "../api/types";
+import { FullStore } from "../api/types";
 import OpeningHoursDisplay from "./opening-hours-display";
 import StoreOwnerActions from "./store-owner-actions";
 

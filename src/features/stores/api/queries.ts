@@ -3,8 +3,7 @@
 
 import { db } from "@/lib/db";
 import { stores, users, products } from "@/lib/db/schema";
-import { desc, eq, inArray } from "drizzle-orm";
-import { Store } from "./types"; // Assurez-vous que Store inclut tous les champs nécessaires
+import {  eq, inArray } from "drizzle-orm";
 
 // Fonction utilitaire pour réessayer en cas d'échec (optionnel)
 async function retry<T>(fn: () => Promise<T>, retries: number = 3, delay: number = 1000): Promise<T> {
@@ -20,7 +19,7 @@ async function retry<T>(fn: () => Promise<T>, retries: number = 3, delay: number
   throw new Error("Max retries reached");
 }
 
-export async function getAllStores(): Promise<Store[] | any[]> {
+export async function getAllStores(){
   try {
     const allStores = await retry(async () => {
       return await db
@@ -90,7 +89,7 @@ export async function getAllStores(): Promise<Store[] | any[]> {
   }
 }
 
-export async function getStoreById(id: number): Promise<any | null> {
+export async function getStoreById(id: number){
   try {
     const [store] = await db.select().from(stores).where(eq(stores.id, id)).limit(1);
     if (!store) return null;
@@ -150,7 +149,7 @@ export async function getStoreById(id: number): Promise<any | null> {
   }
 }
 
-export async function getStoreByUserId(userId: number): Promise<Partial<Store> | null> {
+export async function getStoreByUserId(userId: number){
   try {
     const [store] = await db
       .select({
@@ -183,11 +182,11 @@ export async function getStoreByUserId(userId: number): Promise<Partial<Store> |
       profileImageUrl: store.profileImageUrl ? String(store.profileImageUrl) : null,
       coverImageUrl: store.coverImageUrl ? String(store.coverImageUrl) : null,
       description: store.description ? String(store.description) : null,
-      activityType: String(store.activityType) as any,
-      openingHours: store.openingHours as any,
+      activityType: String(store.activityType),
+      openingHours: store.openingHours,
       isOpenNow: Boolean(store.isOpenNow),
-      createdAt: store.createdAt as any,
-      updatedAt: store.updatedAt as any,
+      createdAt: store.createdAt,
+      updatedAt: store.updatedAt,
     };
 
     return result;

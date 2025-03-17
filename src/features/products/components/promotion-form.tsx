@@ -60,11 +60,8 @@ export default function PromotionForm({ storeId }: PromotionFormProps) {
     try {
       await createPromotion(storeId, formData);
       router.push(`/marketplace/stores/${storeId}/promotions`);
-    } catch (err: any) {
-      setError(
-        err.message ||
-          "Une erreur est survenue lors de la création de la promotion."
-      );
+    } catch {
+      setError("Une erreur est survenue lors de la création de la promotion.");
     }
   };
 

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getStoreById } from "@/features/stores/api/queries";
 import { getPromotionById } from "@/features/promotions/api/queries";
 import PromotionForm from "@/features/promotions/components/promotion-form";
+import { Promotion } from "@/features/promotions/api/types";
 
 interface EditPromotionPageProps {
   params: Promise<{ storeId: string; promotionId: string }>;
@@ -41,10 +42,10 @@ export default async function EditPromotionPage({
     discountPercentage: promotion.discountPercentage,
     startDate: promotion.startDate
       ? new Date(promotion.startDate).toISOString().split("T")[0]
-      : undefined,
+      : null,
     endDate: promotion.endDate
       ? new Date(promotion.endDate).toISOString().split("T")[0]
-      : undefined,
+      : null,
   };
 
   return (
@@ -52,7 +53,7 @@ export default async function EditPromotionPage({
       <PromotionForm
         storeId={storeId}
         promotionId={promotionId}
-        initialData={initialData as any}
+        initialData={initialData}
       />
     </div>
   );

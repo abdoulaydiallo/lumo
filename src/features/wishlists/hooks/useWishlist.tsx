@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner"; // Correction typo: "sonner" -> "sonner"
+import { Wishlist } from "../api/types";
 
 export function useWishlist(userId: number) {
   const queryClient = useQueryClient();
@@ -56,7 +57,7 @@ export function useWishlist(userId: number) {
   const isWishlisted = (productId: number): boolean => {
     if (!wishlistQuery.data || wishlistQuery.isLoading) return false;
     return wishlistQuery.data.items.some(
-      (item: any) => item.productId === productId
+      (item: Wishlist) => item.productId === productId
     );
   };
 

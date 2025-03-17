@@ -48,7 +48,7 @@ export default function ProductDetails({
     ? product.promotions[0].promotion.discountPercentage
     : 0;
   const isNew =
-    new Date(product.createdAt as any) >
+    new Date(product.createdAt as Date) >
     new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const selectedVariant = product.variants.find(
     (v) => v.id === selectedVariantId

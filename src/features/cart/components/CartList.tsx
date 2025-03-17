@@ -10,6 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { CartItem } from "../api/queries";
 
 export function CartList() {
   const { data: session, status } = useSession();
@@ -105,13 +106,13 @@ export function CartList() {
   }
 
   const totalPrice = cart.items.reduce(
-    (sum: number, item: { variantPrice: any; productPrice: any; quantity: number; }) =>
+    (sum: number, item: CartItem) =>
       sum + (item.variantPrice || item.productPrice || 0) * item.quantity,
     0
   );
 
   const handleQuantityChange = (productId: number, delta: number) => {
-    const item = cart.items.find((i: any) => i.productId === productId);
+    const item = cart.items.find((i: CartItem) => i.productId === productId);
     if (!item) return;
     const newQuantity = Math.max(1, item.quantity + delta); // Minimum 1
     updateQuantityMutation.mutate({ productId, quantity: newQuantity });
@@ -147,7 +148,7 @@ export function CartList() {
           </CardHeader>
           <CardContent className="p-4 space-y-4">
             <ul className="space-y-4">
-              {cart.items.map((item: any, index: number) => (
+              {cart.items.map((item: CartItem, index: number) => (
                 <motion.li
                   key={item.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -159,7 +160,10 @@ export function CartList() {
                     <div className="relative w-16 h-16">
                       <Image
                         src={item.productImage || "/placeholder-image.jpg"}
-                        alt={item.productName}
+                        alt={item.productName || "Product"}
+                        width={64}  
+                        height={64}
+                        layout="responsive"
                         fill
                         className="object-contain rounded-md"
                         loading="lazy"
@@ -176,14 +180,18 @@ export function CartList() {
                           : ""}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {(
-                          item.variantPrice || item.productPrice
-                        ).toLocaleString()}{" "}
+                        {item.variantPrice &&
+                          item.productPrice &&
+                          (
+                            item.variantPrice || item.productPrice
+                          ).toLocaleString()}{" "}
                         GNF x {item.quantity} =
-                        {(
-                          item.quantity *
-                          (item.variantPrice || item.productPrice)
-                        ).toLocaleString()}{" "}
+                        {item.variantPrice &&
+                          item.productPrice &&
+                          (
+                            item.quantity *
+                            (item.variantPrice || item.productPrice)
+                          ).toLocaleString()}{" "}
                         GNF
                       </p>
                       <div className="flex items-center gap-2">

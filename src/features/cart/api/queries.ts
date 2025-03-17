@@ -5,7 +5,7 @@ import { cartItems, products, productImages, productVariants } from "@/lib/db/sc
 import { eq } from "drizzle-orm";
 
 // Définir le type des résultats retournés
-interface CartItem {
+export interface CartItem {
   id: number;
   userId: number;
   productId: number;

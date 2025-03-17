@@ -13,13 +13,13 @@ export default function OpeningHoursDisplay({
     <Card className="border border-border rounded-lg bg-background">
       <CardHeader>
         <CardTitle className="text-xl font-semibold text-foreground">
-          Horaires d'ouverture
+          Horaires d&apos;ouverture
         </CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="space-y-2">
           {Object.entries(openingHours || {}).map(
-            ([day, { open, close, isClosed }]: any) => (
+            ([day, { open, close, isClosed }]) => (
               <li key={day} className="flex justify-between text-sm">
                 <span className="capitalize">
                   {day === "monday"
@@ -44,7 +44,7 @@ export default function OpeningHoursDisplay({
                   {isClosed ? "Fermé" : `${open} - ${close}`}
                 </span>
               </li>
-            ) as any
+            )
           )}
         </ul>
       </CardContent>

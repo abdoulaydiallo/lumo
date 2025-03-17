@@ -1,9 +1,10 @@
 import { memo } from "react";
 import ProductCard from "./product-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Product } from "../api/types";
 
 interface ProductListProps {
-  products: any[];
+  products: Product[];
 }
 
 function ProductList({ products }: ProductListProps) {

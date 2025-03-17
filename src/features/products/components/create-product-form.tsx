@@ -130,9 +130,8 @@ export default function CreateProductForm({
         await createProduct(storeId, formData);
         router.push(`/marketplace/stores/${storeId}/products`);
       }
-    } catch (err: any) {
+    } catch{
       setError(
-        err.message ||
           `Une erreur est survenue lors de la ${
             isEditing ? "mise à jour" : "création"
           } du produit.`
@@ -140,7 +139,6 @@ export default function CreateProductForm({
     }
   };
 
-  const formatNumber = (value: number) => value.toLocaleString("fr-GN");
 
   return (
     <Form {...form}>

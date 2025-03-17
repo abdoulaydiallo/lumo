@@ -1,7 +1,18 @@
 import { db } from "@/lib/db";
-import { products, productStocks, productCategoryRelation, productPromotions } from "@/lib/db/schema";
+import {
+  products,
+  productStocks,
+  productCategoryRelation,
+  productPromotions
+} from "@/lib/db/schema";
 import { SQL, eq, gte, lte, or, like, sql, inArray, and } from "drizzle-orm";
-import { getProductImages, getProductVariants, getProductCategories, getProductPromotions, getProductStock } from "./queries";
+import {
+  getProductImages,
+  getProductVariants,
+  getProductCategories,
+  getProductPromotions,
+  getProductStock
+} from "./queries";
 import { Product } from "./types";
 
 interface FilterOptions {
@@ -24,7 +35,7 @@ export async function getProductsWithFiltersAndPagination(
   filters: FilterOptions = {},
   pagination: PaginationOptions = { limit: 10, offset: 0 }
 ): Promise<{ products: Product[]; total: number }> {
-  const { storeId, categoryIds, minPrice, maxPrice, searchTerm, promotionId, sortBy = "relevance", inStock } = filters;
+  const { storeId, categoryIds, minPrice, maxPrice, searchTerm, promotionId, inStock } = filters;
   const { limit, offset } = pagination;
 
   // Conditions de filtre

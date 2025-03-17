@@ -12,7 +12,7 @@ import {
   productPromotions,
   productStocks,
 } from "@/lib/db/schema";
-import { eq, and, SQL, lte, gte, or, gt, lt, like, inArray, sql } from "drizzle-orm";
+import { eq, and, SQL, lte, gte, or, like, inArray, sql } from "drizzle-orm";
 import {
   ProductImage,
   ProductVariant,

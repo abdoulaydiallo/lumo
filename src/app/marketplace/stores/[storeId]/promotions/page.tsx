@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import PromotionsTable from "@/features/promotions/components/promotions-table";
+import { Promotion } from "@/features/products/api/types";
 
 interface PromotionsPageProps {
   params: Promise<{ storeId: string }>;
@@ -75,7 +76,7 @@ export default async function PromotionsPage({
         ) : (
           <div className="border rounded-md">
             <PromotionsTable
-              initialPromotions={promotions as any}
+              initialPromotions={promotions}
               storeId={storeId}
               initialTotal={total}
             />

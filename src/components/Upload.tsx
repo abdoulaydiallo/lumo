@@ -268,11 +268,13 @@ export function Upload({
       {value.length > 0 && !open && (
         <div className="flex gap-2 mt-2">
           {value.map((src, index) => (
-            <img
+            <Image
               key={index}
               src={src}
               alt={`Image ${index + 1}`}
               className="w-24 h-24 object-contain rounded"
+              width={96}
+              height={96}
             />
           ))}
         </div>
