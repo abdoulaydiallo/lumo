@@ -83,8 +83,8 @@ export async function Navbar({ logo = "Lumo", className }: NavbarProps) {
         className
       )}
     >
-      <div className="container mx-auto px-4 flex items-center justify-between gap-3 py-4">
-        <Logo title="Lumo" />
+      <div className="px-4 md:px-8 lg:px-12 flex items-center justify-between gap-3 py-4">
+        <Logo title="Marketplace" />
         <SearchBar className="flex-1 max-w-3xl hidden md:block" />
         <UserActions
           className="items-center space-x-2 hidden md:flex"

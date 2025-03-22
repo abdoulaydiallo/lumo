@@ -17,36 +17,10 @@ import { useSession } from "next-auth/react";
 import { useWishlist } from "@/features/wishlists/hooks/useWishlist"; // Ajout du hook wishlist
 import { useCart } from "@/features/cart/hooks/useCart"; // Ajout du hook cart
 import { WishlistButton } from "@/features/wishlists/components/WishListButton";
+import { Product } from "@/lib/db/search.engine";
 
 interface ProductCardProps {
-  product: {
-    id: number;
-    name: string;
-    description: string;
-    price: number;
-    stockStatus: string;
-    storeId: number;
-    images: { id: number; imageUrl: string; productId: number }[];
-    promotions: { id: number; discountPercentage: number; productId: number }[];
-    stock: {
-      availableStock: number;
-      reservedStock: number;
-      stockLevel: number;
-    };
-    variants: {
-      id: number;
-      variantType: string;
-      variantValue: string;
-      price: number;
-      stock: number;
-    }[];
-    categories: { id: number; name: string }[];
-    createdAt: string;
-    updatedAt: string;
-    weight: number;
-    store?: { name: string };
-    reviews?: { rating: number };
-  };
+  product: Product;
   storeId?: number;
 }
 
@@ -69,7 +43,7 @@ export default function ProductCard({ product, storeId }: ProductCardProps) {
   const discountedPrice = hasPromotion
     ? product.price * (1 - discountPercentage / 100)
     : product.price;
-  const rating = product.reviews?.rating || 0;
+  const rating = product.rating || 0;
   const isNew =
     new Date(product.createdAt) >
     new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -236,14 +210,14 @@ export default function ProductCard({ product, storeId }: ProductCardProps) {
               )}
             </div>
             {product.stockStatus === "in_stock" &&
-              product.stock.availableStock > 0 && (
+              product.stock!.availableStock > 0 && (
                 <span className="text-xs text-green-600">
-                  En stock ({product.stock.availableStock} disponibles)
+                  En stock ({product.stock!.availableStock} disponibles)
                 </span>
               )}
             {product.stockStatus === "low_stock" && (
               <span className="text-xs text-yellow-600">
-                Stock faible ({product.stock.availableStock} restants)
+                Stock faible ({product.stock!.availableStock} restants)
               </span>
             )}
           </div>
@@ -275,7 +249,7 @@ export default function ProductCard({ product, storeId }: ProductCardProps) {
                 disabled={
                   isAdding ||
                   status === "unauthenticated" ||
-                  product.stock.availableStock <= 0
+                  product.stock!.availableStock <= 0
                 }
               >
                 <ShoppingCart className="w-4 h-4 sm:mr-1" />

@@ -35,6 +35,13 @@ export interface Product {
   categories: { id: number; name: string }[];
   promotions: { id: number; promotionId: number; productId: number; discountPercentage: number }[];
   stock?: { id: number; stockLevel: number; reservedStock: number; availableStock: number; productId: number };
+  popularity: number; // Nombre de commandes (basé sur orderItems)
+  rating: number | null; // Moyenne des avis (basé sur reviews)
+  relevanceScore?: number; // Score de pertinence (optionnel, pour "relevance")
+}
+
+export interface SuggestionResult {
+  suggestions: string[];
 }
 
 export interface SearchFilters {
@@ -104,14 +111,15 @@ function getSortValue(product: Product, sort: SortOption): string {
     case "newest":
       return product.createdAt.toISOString();
     case "popularity":
-      return "0"; // À ajuster selon la logique réelle (ex: nombre de commandes)
+      return product.popularity.toString(); // Nombre de commandes
     case "rating_desc":
-      return "0"; // À ajuster selon la logique réelle (ex: moyenne des avis)
+      return (product.rating ?? 0).toString(); // Moyenne des avis, 0 si null
     case "stock_desc":
       return product.stock?.availableStock?.toString() || "0";
     case "discount_desc":
       return product.promotions[0]?.discountPercentage?.toString() || "0";
     case "relevance":
+      return product.relevanceScore?.toString() ?? product.id.toString(); // Score de pertinence, sinon ID
     default:
       return product.id.toString();
   }
@@ -120,62 +128,62 @@ function getSortValue(product: Product, sort: SortOption): string {
 /**
  * Construit les conditions SQL WHERE en fonction des filtres et du curseur composite.
  */
+
 function buildWhereConditions(filters: SearchFilters, sort: SortOption, cursor?: Pagination["cursor"]): SQL[] {
   const conditions: SQL[] = [];
 
-  if (filters.storeId !== null && filters.storeId !== undefined) {
+  // Filtre storeId
+  if (filters.storeId !== undefined && filters.storeId >= 0) {
     conditions.push(sql`${products.storeId} = ${filters.storeId}`);
   }
 
-  if (filters.minPrice !== null && filters.minPrice !== undefined) {
+  // Filtre minPrice (entier positif ou zéro)
+  if (filters.minPrice !== undefined && Number.isInteger(filters.minPrice) && filters.minPrice >= 0) {
     conditions.push(sql`${products.price} >= ${filters.minPrice}`);
   }
 
-  if (filters.maxPrice !== null && filters.maxPrice !== undefined) {
+  // Filtre maxPrice (entier positif ou zéro, cohérent avec minPrice)
+  if (filters.maxPrice !== undefined && Number.isInteger(filters.maxPrice) && filters.maxPrice >= 0 &&
+      (filters.minPrice === undefined || filters.maxPrice >= filters.minPrice)) {
     conditions.push(sql`${products.price} <= ${filters.maxPrice}`);
   }
 
-  if (filters.inStock !== null && filters.inStock !== undefined) {
+  // Filtre inStock
+  if (filters.inStock !== undefined) {
     conditions.push(
       filters.inStock
-        ? sql`${products.stockStatus} IN ('in_stock', 'low_stock') AND ${products.stockStatus} IS NOT NULL`
+        ? sql`${products.stockStatus} IN ('in_stock', 'low_stock')`
         : sql`${products.stockStatus} = 'out_of_stock' OR ${products.stockStatus} IS NULL`
     );
   }
 
-  if (filters.searchTerm && filters.searchTerm.trim().length > 0) {
-    try {
-      // Nettoyer le searchTerm : supprimer les caractères non alphanumériques sauf espaces
-      const cleanedSearchTerm = filters.searchTerm
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9\s]/g, "") // Supprimer les caractères spéciaux
-        .replace(/\s+/g, " & "); // Remplacer les espaces multiples par " & "
+  // Filtre searchTerm (recherche textuelle)
+  if (filters.searchTerm?.trim() && filters.searchTerm.trim().length >= 2) {
+    const cleanedSearchTerm = filters.searchTerm
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, " & ");
+    conditions.push(sql`to_tsvector('french', COALESCE(${products.name}, '') || ' ' || COALESCE(${products.description}, '')) 
+      @@ to_tsquery('french', ${cleanedSearchTerm + ':*'})`);
+  }
 
-      if (cleanedSearchTerm.length !== 0){
-        const searchQuery = cleanedSearchTerm + ":*"; // Ajouter le préfixe pour la recherche
-
-        const condition = sql`to_tsvector('french', COALESCE(${products.name}, '') || ' ' || COALESCE(${products.description}, '')) 
-          @@ to_tsquery('french', ${searchQuery})`;
-        conditions.push(condition);
-      }
-    } catch (error) {
-      console.error("Erreur lors de la génération de la condition de recherche:", error);
-      // Ne pas ajouter la condition en cas d'erreur
+  // Filtre categoryIds
+  if (filters.categoryIds?.length! > 0) {
+    const validCategoryIds = filters.categoryIds!.filter(id => Number.isInteger(id) && id >= 0);
+    if (validCategoryIds.length > 0) {
+      conditions.push(
+        sql`${products.id} IN (
+          SELECT ${productCategoryRelation.productId}
+          FROM ${productCategoryRelation}
+          WHERE ${productCategoryRelation.categoryId} IN (${sql.join(validCategoryIds, sql`,`)})
+        )`
+      );
     }
   }
 
-  if ((filters.categoryIds ?? []).length > 0) {
-    conditions.push(
-      sql`${products.id} IN (
-        SELECT ${productCategoryRelation.productId}
-        FROM ${productCategoryRelation}
-        WHERE ${productCategoryRelation.categoryId} IN (${sql.join(filters.categoryIds ?? [], sql`,`)})
-      )`
-    );
-  }
-
-  if (filters.promotionId !== null && filters.promotionId !== undefined) {
+  // Filtre promotionId
+  if (filters.promotionId !== undefined && Number.isInteger(filters.promotionId) && filters.promotionId >= 0) {
     conditions.push(
       sql`${products.id} IN (
         SELECT ${productPromotions.productId}
@@ -185,6 +193,7 @@ function buildWhereConditions(filters: SearchFilters, sort: SortOption, cursor?:
     );
   }
 
+  // Filtre variantType et variantValue
   if (filters.variantType && filters.variantValue) {
     conditions.push(
       sql`${products.id} IN (
@@ -196,7 +205,8 @@ function buildWhereConditions(filters: SearchFilters, sort: SortOption, cursor?:
     );
   }
 
-  if (filters.minRating !== null && filters.minRating !== undefined) {
+  // Filtre minRating
+  if (filters.minRating !== undefined && Number.isInteger(filters.minRating) && filters.minRating >= 0 && filters.minRating <= 5) {
     conditions.push(
       sql`${products.id} IN (
         SELECT ${reviews.productId}
@@ -207,6 +217,7 @@ function buildWhereConditions(filters: SearchFilters, sort: SortOption, cursor?:
     );
   }
 
+  // Filtre region
   if (filters.region) {
     conditions.push(
       sql`${products.storeId} IN (
@@ -218,7 +229,8 @@ function buildWhereConditions(filters: SearchFilters, sort: SortOption, cursor?:
     );
   }
 
-  if (filters.availableStockMin !== null && filters.availableStockMin !== undefined) {
+  // Filtre availableStockMin
+  if (filters.availableStockMin !== undefined && Number.isInteger(filters.availableStockMin) && filters.availableStockMin >= 0) {
     conditions.push(
       sql`${products.id} IN (
         SELECT ${productStocks.productId}
@@ -228,28 +240,93 @@ function buildWhereConditions(filters: SearchFilters, sort: SortOption, cursor?:
     );
   }
 
-  // Ajout des conditions pour le curseur composite
+  // Gestion du curseur
   if (cursor) {
     const cursorId = parseInt(cursor.id);
+    if (!Number.isInteger(cursorId) || cursorId < 0) {
+      throw new Error("ID du curseur invalide");
+    }
     const cursorSortValue = cursor.sortValue;
 
     switch (sort) {
       case "price_asc":
         conditions.push(
-          sql`(${products.price} > ${parseFloat(cursorSortValue)}) OR 
-             (${products.price} = ${parseFloat(cursorSortValue)} AND ${products.id} > ${cursorId})`
+          sql`(${products.price} > ${parseInt(cursorSortValue)}) OR 
+             (${products.price} = ${parseInt(cursorSortValue)} AND ${products.id} > ${cursorId})`
         );
         break;
       case "price_desc":
         conditions.push(
-          sql`(${products.price} < ${parseFloat(cursorSortValue)}) OR 
-             (${products.price} = ${parseFloat(cursorSortValue)} AND ${products.id} > ${cursorId})`
+          sql`(${products.price} < ${parseInt(cursorSortValue)}) OR 
+             (${products.price} = ${parseInt(cursorSortValue)} AND ${products.id} > ${cursorId})`
         );
         break;
       case "newest":
         conditions.push(
           sql`(${products.createdAt} < ${new Date(cursorSortValue)}) OR 
              (${products.createdAt} = ${new Date(cursorSortValue)} AND ${products.id} > ${cursorId})`
+        );
+        break;
+      case "popularity":
+        conditions.push(
+          sql`(COALESCE((
+            SELECT COUNT(${orderItems.id})
+            FROM ${orderItems}
+            WHERE ${orderItems.productId} = ${products.id}
+          ), 0) < ${parseInt(cursorSortValue)}) OR 
+          (COALESCE((
+            SELECT COUNT(${orderItems.id})
+            FROM ${orderItems}
+            WHERE ${orderItems.productId} = ${products.id}
+          ), 0) = ${parseInt(cursorSortValue)} AND ${products.id} > ${cursorId})`
+        );
+        break;
+      case "rating_desc":
+        conditions.push(
+          sql`(COALESCE((
+            SELECT AVG(${reviews.rating})
+            FROM ${reviews}
+            WHERE ${reviews.productId} = ${products.id}
+          ), 0) < ${parseFloat(cursorSortValue)}) OR 
+          (COALESCE((
+            SELECT AVG(${reviews.rating})
+            FROM ${reviews}
+            WHERE ${reviews.productId} = ${products.id}
+          ), 0) = ${parseFloat(cursorSortValue)} AND ${products.id} > ${cursorId})`
+        );
+        break;
+      case "stock_desc":
+        conditions.push(
+          sql`(COALESCE((
+            SELECT ${productStocks.availableStock}
+            FROM ${productStocks}
+            WHERE ${productStocks.productId} = ${products.id}
+            LIMIT 1
+          ), 0) < ${parseInt(cursorSortValue)}) OR 
+          (COALESCE((
+            SELECT ${productStocks.availableStock}
+            FROM ${productStocks}
+            WHERE ${productStocks.productId} = ${products.id}
+            LIMIT 1
+          ), 0) = ${parseInt(cursorSortValue)} AND ${products.id} > ${cursorId})`
+        );
+        break;
+      case "discount_desc":
+        conditions.push(
+          sql`(COALESCE((
+            SELECT ${promotions.discountPercentage}
+            FROM ${promotions}
+            JOIN ${productPromotions} ON ${promotions.id} = ${productPromotions.promotionId}
+            WHERE ${productPromotions.productId} = ${products.id}
+            LIMIT 1
+          ), 0) < ${parseInt(cursorSortValue)}) OR 
+          (COALESCE((
+            SELECT ${promotions.discountPercentage}
+            FROM ${promotions}
+            JOIN ${productPromotions} ON ${promotions.id} = ${productPromotions.promotionId}
+            WHERE ${productPromotions.productId} = ${products.id}
+            LIMIT 1
+          ), 0) = ${parseInt(cursorSortValue)} AND ${products.id} > ${cursorId})`
         );
         break;
       case "relevance":
@@ -396,6 +473,22 @@ export async function searchProducts({
           WHERE ps.product_id = "products"."id"
           LIMIT 1
         ), '{}'::json) AS stock`,
+        popularity: sql`COALESCE((
+          SELECT COUNT(${orderItems.id})
+          FROM ${orderItems}
+          WHERE ${orderItems.productId} = "products"."id"
+        ), 0) AS popularity`,
+        rating: sql`(
+          SELECT AVG(${reviews.rating})
+          FROM ${reviews}
+          WHERE ${reviews.productId} = "products"."id"
+        ) AS rating`,
+        relevanceScore: sort === "relevance" && filters.searchTerm?.trim()
+          ? sql`ts_rank(
+              to_tsvector('french', COALESCE(${products.name}, '') || ' ' || COALESCE(${products.description}, '')),
+              to_tsquery('french', ${(filters.searchTerm ?? "").toLowerCase().trim().replace(/ /g, " & ")})
+            ) AS relevance_score`
+          : sql`NULL AS relevance_score`,
       })
       .from(products)
       .where(and(...whereConditions))
@@ -427,6 +520,71 @@ export async function searchProducts({
     console.error("Erreur lors de la recherche des produits :", error);
     const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
     throw new Error(`Impossible de rechercher les produits : ${errorMessage}`);
+  }
+}
+
+/**
+ * Récupère des suggestions de recherche basées sur un terme partiel.
+ * @param query Terme de recherche partiel (minimum 2 caractères).
+ * @param limit Nombre maximum de suggestions (par défaut 8).
+ * @returns Liste de suggestions.
+ */
+export async function getSearchSuggestions(query: string, limit: number = 8): Promise<SuggestionResult> {
+  const cacheKey = `suggestions:${query.toLowerCase().trim()}:${limit}`;
+
+  try {
+    const cachedSuggestions = await redis.get(cacheKey);
+    if (cachedSuggestions) {
+      return cachedSuggestions as SuggestionResult;
+    }
+
+    if (!query?.trim() || query.trim().length < 2) {
+      return { suggestions: [] };
+    }
+
+    const cleanedQuery = query
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, " & ") + ":*";
+
+    const suggestionsQuery = db
+      .selectDistinct({
+        name: products.name,
+        rank: sql`ts_rank(
+          to_tsvector('french', COALESCE(${products.name}, '') || ' ' || COALESCE(${products.description}, '')),
+          to_tsquery('french', ${cleanedQuery})
+        )`.as("rank"), // Ajouter ts_rank comme colonne
+      })
+      .from(products)
+      .where(
+        sql`to_tsvector('french', COALESCE(${products.name}, '') || ' ' || COALESCE(${products.description}, '')) 
+        @@ to_tsquery('french', ${cleanedQuery})`
+      )
+      .orderBy(sql`rank DESC`) // Référencer la colonne rank
+      .limit(limit);
+
+    const result = await suggestionsQuery;
+    const suggestions = result.map((item) => item.name);
+
+    const suggestionResult: SuggestionResult = { suggestions };
+    await redis.set(cacheKey, suggestionResult, { ex: 300 });
+
+    return suggestionResult;
+  } catch (error: unknown) {
+    console.error("Erreur lors de la récupération des suggestions :", error);
+    return { suggestions: [] };
+  }
+}
+
+/**
+ * Invalide le cache des suggestions.
+ */
+export async function invalidateSuggestionsCache(query: string) {
+  const cacheKeys: any = await redis.keys(`suggestions:${query.toLowerCase().trim()}:*`);
+  if (cacheKeys.length > 0) {
+    await redis.del(cacheKeys);
+    console.log(`Cache invalidé pour ${cacheKeys.length} clés liées à la requête "${query}"`);
   }
 }
 

@@ -10,11 +10,12 @@ import {
   numeric,
   pgEnum,
   index,
-  vector,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm/sql";
 
 // Enums
+export const storeVerificationStatuses = pgEnum("store_verification_statuses", ["pending", "approved", "rejected"]);
+export const stockStatuses = pgEnum("stock_statuses", ["in_stock", "low_stock", "out_of_stock"]);
 export const userStatus = pgEnum("user_status", ["pending", "active", "rejected"]);
 export const userRoles = pgEnum("user_roles", ["user", "driver", "store", "manager", "admin"]);
 export const orderStatuses = pgEnum("order_statuses", ["pending", "in_progress", "delivered"]);
@@ -112,6 +113,7 @@ export const addresses = pgTable(
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
+  (table) => [index("addresses_region_idx").on(table.region)]
 );
 
 // Table: stores (ex-sellers)
@@ -129,11 +131,12 @@ export const stores = pgTable(
     activityType: varchar("activity_type", { length: 50 }), // Ex. "retail", "wholesale"
     description: text("description"),
     openingHours: jsonb("opening_hours"), // Ex. { "monday": { "open": "08:00", "close": "18:00" } }
-    verificationStatus: varchar("verification_status", { length: 50 }).default("pending"),
+    verificationStatus: storeVerificationStatuses("verification_status").notNull().default("pending"),
     isOpenNow: boolean("is_open_now").default(false),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
+  (table) => [index("stores_user_id_idx").on(table.userId)]
 );
 
 // Table: products
@@ -146,7 +149,7 @@ export const products = pgTable(
     price: integer("price").notNull(),
     weight: integer("weight").notNull().default(10),
     storeId: integer("store_id").references(() => stores.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    stockStatus: varchar("stock_status", { length: 50 }).default("in_stock"),
+    stockStatus: stockStatuses("stock_status").notNull().default("in_stock"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
@@ -188,6 +191,7 @@ export const orderItems = pgTable(
   },
   (table) => [
     index("order_items_product_id_idx").on(table.productId),
+    index("order_items_order_id_idx").on(table.orderId)
   ]
 );
 
@@ -413,7 +417,9 @@ export const reviews = pgTable("reviews", {
   verified: boolean("verified").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+},
+  (table) => [index("reviews_product_id_rating_idx").on(table.productId, table.rating)]
+);
 
 // Table: driverReviews
 export const driverReviews = pgTable("driver_reviews", {
@@ -472,6 +478,7 @@ export const productVariants = pgTable(
   },
   (table) => [
     index("product_variants_product_id_idx").on(table.productId),
+    index("product_variants_type_value_idx").on(table.productId, table.variantType, table.variantValue)
   ]
 );
 
@@ -488,6 +495,8 @@ export const productStocks = pgTable(
   },
   (table) => [
     index("product_stocks_product_id_idx").on(table.productId),
+    index("product_stocks_available_stock_idx").on(table.availableStock),
+    sql`CONSTRAINT stock_consistency CHECK (available_stock = stock_level - reserved_stock)`
   ]
 );
 
@@ -511,7 +520,7 @@ export const promotions = pgTable("promotions", {
   id: serial("id").primaryKey(),
   storeId: integer("store_id").references(() => stores.id, { onDelete: "cascade", onUpdate: "cascade" }),
   code: varchar("code", { length: 100 }).unique(),
-  discountPercentage: integer("discount_percentage").notNull(),
+  discountPercentage: numeric("discount_percentage", { precision: 5, scale: 2 }).notNull(),// Ex. 12.50%
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
   isExpired: boolean("is_expired").default(false).notNull(),
@@ -534,6 +543,7 @@ export const productPromotions = pgTable(
   (table) => [
     index("product_promotions_product_id_idx").on(table.productId),
     index("product_promotions_promotion_id_idx").on(table.promotionId),
+    index("product_promotions_product_promotion_idx").on(table.productId, table.promotionId)
   ]
 );
 

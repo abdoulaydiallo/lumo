@@ -12,7 +12,7 @@ export const Logo = ({ title }: IParams) => {
   return (
     <div
       onClick={() => router.push("/")}
-      className="text-lg font-bold text-primary hover:text-primary/90 transition-colors cursor-pointer"
+      className="text-2xl font-bold text-primary hover:text-primary/90 transition-colors cursor-pointer"
     >
       {title}
     </div>

@@ -1,7 +1,7 @@
 import { memo } from "react";
 import ProductCard from "./product-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Product } from "../api/types";
+import { Product } from "@/lib/db/search.engine";
 
 interface ProductListProps {
   products: Product[];
@@ -24,7 +24,7 @@ function ProductList({ products }: ProductListProps) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product as any} storeId={product.storeId!} />
+        <ProductCard key={product.id} product={product} storeId={product.storeId!} />
       ))}
     </div>
   );
