@@ -4,10 +4,8 @@ import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { auth } from "@/lib/auth";
-import Navbar from "@/components/navbar/Navbar";
 import { Toaster } from "@/components/ui/sonner";
 import QueryClientProviderWrapper from "@/providers/query-client-provider";
-import { SearchProvider } from "@/contexts/SearchContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,10 +45,7 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <SessionProvider session={session}>
-              <SearchProvider>
-                <Navbar logo="Marketplace" />
-                <div>{children}</div>
-              </SearchProvider>
+              <div>{children}</div>
             </SessionProvider>
           </ThemeProvider>
         </QueryClientProviderWrapper>
