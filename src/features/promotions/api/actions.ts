@@ -6,7 +6,7 @@ import { eq, and, lt } from "drizzle-orm";
 
 export async function createPromotion(storeId: number, formData: FormData) {
   const code = formData.get("code") as string;
-  const discountPercentage = Number(formData.get("discountPercentage"));
+  const discountPercentage = formData.get("discountPercentage") as string;
   const startDate = formData.get("startDate") ? new Date(formData.get("startDate") as string) : null;
   const endDate = formData.get("endDate") ? new Date(formData.get("endDate") as string) : null;
 
@@ -21,7 +21,7 @@ export async function createPromotion(storeId: number, formData: FormData) {
 
 export async function updatePromotion(promotionId: number, storeId: number, formData: FormData) {
   const code = formData.get("code") as string;
-  const discountPercentage = Number(formData.get("discountPercentage"));
+  const discountPercentage = formData.get("discountPercentage") as string;
   const startDate = formData.get("startDate") ? new Date(formData.get("startDate") as string) : null;
   const endDate = formData.get("endDate") ? new Date(formData.get("endDate") as string) : null;
 

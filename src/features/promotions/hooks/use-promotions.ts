@@ -9,7 +9,7 @@ export function usePromotions(
   page: number = 1,
   filter: "active" | "inactive" | "expired" | "all" = "all",
   limit: number = 10,
-  initialData?: { promotions: Promotion[]; total: number }
+  initialData?: { promotions: Promotion[]; total: number } | any
 ) {
   return useQuery({
     queryKey: ["promotions", storeId, page, filter],

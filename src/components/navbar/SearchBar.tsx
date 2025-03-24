@@ -106,7 +106,7 @@ export function SearchBar({ className }: SearchBarProps) {
       onSubmit={handleSearch}
       className={cn("w-full max-w-md mx-auto relative", className)}
     >
-      <div className="relative">
+      <div className="relative border rounded-full">
         <Input
           type="text"
           placeholder="Rechercher des produits..."

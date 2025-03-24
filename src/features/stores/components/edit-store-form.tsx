@@ -59,7 +59,7 @@ const storeSchema = z.object({
 type StoreFormValues = z.infer<typeof storeSchema>;
 
 interface EditStoreFormProps {
-  store: Store;
+  store?:  Store | any;
 }
 
 export default function EditStoreForm({ store }: EditStoreFormProps) {
@@ -84,6 +84,7 @@ export default function EditStoreForm({ store }: EditStoreFormProps) {
       openingHours: {},
     },
   });
+  if (!store) return null;
 
   useEffect(() => {
     if (store) {
@@ -132,6 +133,7 @@ export default function EditStoreForm({ store }: EditStoreFormProps) {
       }
     });
   };
+
 
   if (loading) {
     return (

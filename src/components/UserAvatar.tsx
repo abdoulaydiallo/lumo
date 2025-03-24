@@ -87,7 +87,7 @@ export function UserAvatar({ className }: { className?: string }) {
         >
           <Avatar
             className={cn(
-              "h-9 w-9 border-2 border-primary/20 transition-all duration-300 hover:border-primary",
+              "h-12 w-12 border-2 border-primary/20 transition-all duration-300 hover:border-primary",
               className
             )}
           >
@@ -99,12 +99,6 @@ export function UserAvatar({ className }: { className?: string }) {
               {initials}
             </AvatarFallback>
           </Avatar>
-          <Badge
-            variant="secondary"
-            className="hidden md:block absolute bottom-1 -right-7 text-[10px] font-medium capitalize px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/30 dark:bg-primary/30 dark:text-primary-foreground dark:border-primary/50"
-          >
-            {role}
-          </Badge>
         </motion.div>
       </DropdownMenuTrigger>
       <DropdownMenuContent

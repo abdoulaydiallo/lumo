@@ -1,4 +1,4 @@
-// @/lib/search.engine.ts
+// @/lib/db/search.engine.ts
 // Author: Abdoulaye Diallo
 // Date: 10/03/2025
 // Description: Moteur de recherche optimisé pour les produits avec pagination par curseur et mise en cache Redis.

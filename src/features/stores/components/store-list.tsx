@@ -5,7 +5,7 @@ import { Store } from "../api/types";
 import StoresListSkeleton from "./store-list-skeleton";
 
 interface StoresListProps {
-  stores: Store[];
+  stores: Store[] | any;
   isLoading?: boolean; // Optionnel pour une version client
 }
 

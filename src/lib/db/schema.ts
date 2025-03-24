@@ -10,6 +10,7 @@ import {
   numeric,
   pgEnum,
   index,
+  unique,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm/sql";
 
@@ -418,7 +419,10 @@ export const reviews = pgTable("reviews", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 },
-  (table) => [index("reviews_product_id_rating_idx").on(table.productId, table.rating)]
+  (table) => [
+    index("reviews_product_id_rating_idx").on(table.productId, table.rating),
+    unique("reviews_user_product_unique").on(table.userId, table.productId), // Nouvelle contrainte
+  ]
 );
 
 // Table: driverReviews

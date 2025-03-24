@@ -3,7 +3,9 @@ CREATE TYPE "public"."payment_methods" AS ENUM('orange_money', 'mobile_money', '
 CREATE TYPE "public"."payment_statuses" AS ENUM('pending', 'paid', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."report_statuses" AS ENUM('sales', 'deliveries', 'users', 'driver_performance', 'driver_revenue');--> statement-breakpoint
 CREATE TYPE "public"."shipment_statuses" AS ENUM('pending', 'in_progress', 'delivered', 'failed');--> statement-breakpoint
+CREATE TYPE "public"."stock_statuses" AS ENUM('in_stock', 'low_stock', 'out_of_stock');--> statement-breakpoint
 CREATE TYPE "public"."store_documents_statuses" AS ENUM('pending', 'approved', 'rejected');--> statement-breakpoint
+CREATE TYPE "public"."store_verification_statuses" AS ENUM('pending', 'approved', 'rejected');--> statement-breakpoint
 CREATE TYPE "public"."user_roles" AS ENUM('user', 'driver', 'store', 'manager', 'admin');--> statement-breakpoint
 CREATE TYPE "public"."user_status" AS ENUM('pending', 'active', 'rejected');--> statement-breakpoint
 CREATE TABLE "accounts" (
@@ -272,7 +274,7 @@ CREATE TABLE "products" (
 	"price" integer NOT NULL,
 	"weight" integer DEFAULT 10 NOT NULL,
 	"store_id" integer,
-	"stock_status" varchar(50) DEFAULT 'in_stock',
+	"stock_status" "stock_statuses" DEFAULT 'in_stock' NOT NULL,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
@@ -281,7 +283,7 @@ CREATE TABLE "promotions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"store_id" integer,
 	"code" varchar(100),
-	"discount_percentage" integer NOT NULL,
+	"discount_percentage" numeric(5, 2) NOT NULL,
 	"start_date" timestamp,
 	"end_date" timestamp,
 	"is_expired" boolean DEFAULT false NOT NULL,
@@ -335,7 +337,8 @@ CREATE TABLE "reviews" (
 	"comment" text,
 	"verified" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
+	"updated_at" timestamp DEFAULT now(),
+	CONSTRAINT "reviews_user_product_unique" UNIQUE("user_id","product_id")
 );
 --> statement-breakpoint
 CREATE TABLE "schedules" (
@@ -434,7 +437,7 @@ CREATE TABLE "stores" (
 	"activity_type" varchar(50),
 	"description" text,
 	"opening_hours" jsonb,
-	"verification_status" varchar(50) DEFAULT 'pending',
+	"verification_status" "store_verification_statuses" DEFAULT 'pending' NOT NULL,
 	"is_open_now" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now(),
@@ -573,17 +576,24 @@ ALTER TABLE "user_preferences" ADD CONSTRAINT "user_preferences_user_id_users_id
 ALTER TABLE "verification_tokens" ADD CONSTRAINT "verification_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "wishlists" ADD CONSTRAINT "wishlists_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "wishlists" ADD CONSTRAINT "wishlists_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+CREATE INDEX "addresses_region_idx" ON "addresses" USING btree ("region");--> statement-breakpoint
 CREATE INDEX "order_items_product_id_idx" ON "order_items" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "order_items_order_id_idx" ON "order_items" USING btree ("order_id");--> statement-breakpoint
 CREATE INDEX "product_category_relation_product_id_idx" ON "product_category_relation" USING btree ("product_id");--> statement-breakpoint
 CREATE INDEX "product_category_relation_category_id_idx" ON "product_category_relation" USING btree ("category_id");--> statement-breakpoint
 CREATE INDEX "product_images_product_id_idx" ON "product_images" USING btree ("product_id");--> statement-breakpoint
 CREATE INDEX "product_promotions_product_id_idx" ON "product_promotions" USING btree ("product_id");--> statement-breakpoint
 CREATE INDEX "product_promotions_promotion_id_idx" ON "product_promotions" USING btree ("promotion_id");--> statement-breakpoint
+CREATE INDEX "product_promotions_product_promotion_idx" ON "product_promotions" USING btree ("product_id","promotion_id");--> statement-breakpoint
 CREATE INDEX "product_stocks_product_id_idx" ON "product_stocks" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "product_stocks_available_stock_idx" ON "product_stocks" USING btree ("available_stock");--> statement-breakpoint
 CREATE INDEX "product_variants_product_id_idx" ON "product_variants" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "product_variants_type_value_idx" ON "product_variants" USING btree ("product_id","variant_type","variant_value");--> statement-breakpoint
 CREATE INDEX "products_store_id_idx" ON "products" USING btree ("store_id");--> statement-breakpoint
 CREATE INDEX "products_price_idx" ON "products" USING btree ("price");--> statement-breakpoint
 CREATE INDEX "products_stock_status_idx" ON "products" USING btree ("stock_status");--> statement-breakpoint
 CREATE INDEX "products_created_at_idx" ON "products" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "products_search_idx" ON "products" USING gin (to_tsvector('french', "name" || ' ' || COALESCE("description", '')));--> statement-breakpoint
-CREATE INDEX "promotions_discount_idx" ON "promotions" USING btree ("discount_percentage");
+CREATE INDEX "promotions_discount_idx" ON "promotions" USING btree ("discount_percentage");--> statement-breakpoint
+CREATE INDEX "reviews_product_id_rating_idx" ON "reviews" USING btree ("product_id","rating");--> statement-breakpoint
+CREATE INDEX "stores_user_id_idx" ON "stores" USING btree ("user_id");

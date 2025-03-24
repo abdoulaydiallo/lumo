@@ -14,7 +14,7 @@ export default async function EditStorePage({
 }: IParams) {
   const resolvedParams = await params;
   const storeId = Number(resolvedParams.storeId);
-  const store: Store = await getStoreById(storeId);
+  const store = await getStoreById(storeId);
 
   if (!store) {
     notFound();

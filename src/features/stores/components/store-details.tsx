@@ -7,7 +7,7 @@ import OpeningHoursDisplay from "./opening-hours-display";
 import StoreOwnerActions from "./store-owner-actions";
 
 interface StoreDetailsProps {
-  store: FullStore;
+  store: FullStore | any;
   isOwner: boolean;
 }
 

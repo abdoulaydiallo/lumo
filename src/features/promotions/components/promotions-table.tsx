@@ -60,13 +60,13 @@ interface Promotion {
 
 interface PromotionsTableProps {
   storeId: number;
-  initialPromotions?: Promotion[];
+  initialPromotions?: Promotion[] | any;
   initialTotal?: number;
 }
 
 export default function PromotionsTable({
   storeId,
-  initialPromotions = [],
+  initialPromotions = [] ,
   initialTotal = 0,
 }: PromotionsTableProps) {
   const [page, setPage] = useState(1);

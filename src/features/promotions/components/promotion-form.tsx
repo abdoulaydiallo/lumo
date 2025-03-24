@@ -58,7 +58,7 @@ interface PromotionFormProps {
   promotionId?: number;
   initialData?: {
     code: string | null;
-    discountPercentage: number;
+    discountPercentage: number | string;
     startDate: string | null;
     endDate: string | null;
 };
@@ -76,7 +76,7 @@ export default function PromotionForm({
     resolver: zodResolver(promotionSchema),
     defaultValues: {
       code: initialData?.code || "",
-      discountPercentage: initialData?.discountPercentage || 0,
+      discountPercentage: Number(initialData?.discountPercentage) || 0,
       startDate: initialData?.startDate || "",
       endDate: initialData?.endDate || "",
     },
