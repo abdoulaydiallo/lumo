@@ -26,78 +26,21 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import { useSearch } from "@/features/search/hooks/use-search";
-import { SearchParams, SearchResult, Product } from "@/lib/db/search.engine";
+import { SearchParams, SearchResult, Product, SearchFilters } from "@/lib/db/search.engine";
 import {
   getAllCategories,
   getAllPromotions,
 } from "@/features/products/api/queries";
 import CreateProductForm from "./CreateProductForm";
 import ProductCard from "./ProductCard";
+import ProductFilters from "./ProductFilters"; // Ajout de ProductFilters
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
+import { Badge } from "../shared/Badge";
+import { TableSkeleton } from "./TableSkeleton";
 
-// Skeleton Component
 const Skeleton = ({ className }: { className?: string }) => (
   <div className={`animate-pulse bg-gray-200 rounded-md ${className}`}></div>
-);
-
-const TableSkeleton = () => (
-  <div className="space-y-4">
-    <div className="hidden sm:block">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>
-              <Skeleton className="h-6 w-20" />
-            </TableHead>
-            <TableHead>
-              <Skeleton className="h-6 w-16" />
-            </TableHead>
-            <TableHead className="hidden md:table-cell">
-              <Skeleton className="h-6 w-16" />
-            </TableHead>
-            <TableHead>
-              <Skeleton className="h-6 w-24" />
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {Array(5)
-            .fill(0)
-            .map((_, index) => (
-              <TableRow key={index}>
-                <TableCell>
-                  <Skeleton className="h-4 w-32" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-20" />
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  <Skeleton className="h-4 w-16" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-8 w-24" />
-                </TableCell>
-              </TableRow>
-            ))}
-        </TableBody>
-      </Table>
-    </div>
-    <div className="block sm:hidden space-y-4">
-      {Array(5)
-        .fill(0)
-        .map((_, index) => (
-          <Card key={index} className="p-4">
-            <div className="flex justify-between items-start">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-3 w-20" />
-                <Skeleton className="h-3 w-16" />
-              </div>
-              <Skeleton className="h-8 w-24" />
-            </div>
-          </Card>
-        ))}
-    </div>
-  </div>
 );
 
 interface ProductTableProps {
@@ -109,10 +52,9 @@ export default function ProductTable({
   initialProducts,
   storeId,
 }: ProductTableProps) {
+  const router = useRouter();
   const initialParams: SearchParams = {
-    filters: {
-      storeId: storeId,
-    },
+    filters: { storeId },
     pagination: { limit: 5, cursor: null },
     sort: "relevance",
     useCache: false,
@@ -120,10 +62,12 @@ export default function ProductTable({
 
   const [searchParams, setSearchParams] = useState<SearchParams>(initialParams);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [forceRefresh, setForceRefresh] = useState(false);
-  const { data, isLoading, error } = useSearch(searchParams, initialProducts);
+  const { data, isLoading, error } = useSearch(
+    searchParams,
+    initialProducts,
+    refreshKey
+  );
 
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -153,49 +97,39 @@ export default function ProductTable({
     loadData();
   }, []);
 
-  useEffect(() => {
-    setSearchParams({
-      ...initialParams,
-      pagination: { limit: itemsPerPage, cursor: null },
-    });
-    setCurrentPage(1);
-    if (refreshKey > 0) {
-      setForceRefresh(true);
-    }
-  }, [refreshKey]);
-
-  useEffect(() => {
-    if (!isLoading && forceRefresh) {
-      setForceRefresh(false);
-    }
-  }, [isLoading]);
-
-  const handleSort = (field: keyof Product) => {
-    let sortOption: "price_asc" | "price_desc" | "newest" | "relevance" =
-      "relevance";
+  const handleSort = (field: keyof Product | "stockLevel") => {
+    let sortOption:
+      | "price_asc"
+      | "price_desc"
+      | "newest"
+      | "relevance"
+      | "stock_desc" = "relevance";
     if (field === "price") {
       sortOption =
         searchParams?.sort === "price_asc" ? "price_desc" : "price_asc";
     } else if (field === "createdAt") {
       sortOption = "newest";
+    } else if (field === "stockLevel") {
+      sortOption = "stock_desc";
     }
+
     setSearchParams((prev) => ({
       ...prev,
       sort: sortOption,
       pagination: { limit: itemsPerPage, cursor: null },
     }));
-    setCurrentPage(1);
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    setSearchParams((prev) => ({
-      ...prev,
-      pagination: {
-        limit: itemsPerPage,
-        cursor: page > currentPage ? data.nextCursor : null,
-      },
-    }));
+  const handlePageChange = () => {
+    if (data.nextCursor && !isLoading) {
+      setSearchParams((prev) => ({
+        ...prev,
+        pagination: {
+          limit: itemsPerPage,
+          cursor: data.nextCursor,
+        },
+      }));
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -203,34 +137,47 @@ export default function ProductTable({
       try {
         const response = await fetch(
           `/api/products?productId=${productToDelete.id}&storeId=${storeId}`,
-          {
-            method: "DELETE",
-          }
+          { method: "DELETE" }
         );
 
         if (!response.ok) {
           throw new Error("Échec de la suppression du produit");
         }
 
+        setSearchParams((prev) => ({
+          ...prev,
+          pagination: { limit: itemsPerPage, cursor: null },
+        }));
         setRefreshKey((prev) => prev + 1);
         setProductToDelete(null);
         setIsDeleteDialogOpen(false);
-        window.location.reload();
       } catch (error) {
         console.error("Erreur lors de la suppression:", error);
       }
     }
   };
 
-  const handleProductCreatedOrUpdated = async () => {
+  const handleProductCreatedOrUpdated = (newProductId?: number) => {
     setRefreshKey((prev) => prev + 1);
     setIsCreateDialogOpen(false);
     setIsEditDialogOpen(false);
-    window.location.reload();
+    if (newProductId) {
+      const newProduct = data.products.find((p) => p.id === newProductId);
+      setSelectedProduct(newProduct || null);
+      if (!isEditDialogOpen && newProduct) {
+        setIsEditDialogOpen(true);
+      }
+    }
   };
 
-  const totalPages = Math.ceil(data.total / itemsPerPage);
-  const paginatedProducts = data.products;
+  const handleFilterChange = (newFilters: SearchFilters) => {
+    setSearchParams((prev) => ({
+      ...prev,
+      filters: { storeId, ...newFilters },
+      pagination: { limit: itemsPerPage, cursor: null },
+    }));
+    setRefreshKey((prev) => prev + 1);
+  };
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6 min-h-screen">
@@ -261,6 +208,13 @@ export default function ProductTable({
         </Dialog>
       </div>
 
+      <ProductFilters
+        storeId={storeId}
+        initialProducts={initialProducts}
+        categories={categories}
+        onFilterChange={handleFilterChange} // Nouvelle prop pour gérer les filtres
+      />
+
       {(isLoading || isDataLoading) && (
         <Card className="shadow-sm">
           <CardContent className="px-4">
@@ -288,6 +242,9 @@ export default function ProductTable({
                         Nom <ArrowUpDown className="h-4 w-4 ml-1" />
                       </Button>
                     </TableHead>
+                    <TableHead className="hidden lg:table-cell text-xs sm:text-sm">
+                      Catégorie
+                    </TableHead>
                     <TableHead className="text-xs sm:text-sm">
                       <Button
                         variant="ghost"
@@ -299,9 +256,25 @@ export default function ProductTable({
                     <TableHead className="hidden md:table-cell text-xs sm:text-sm">
                       <Button
                         variant="ghost"
+                        onClick={() => handleSort("stockLevel")}
+                      >
+                        Stock <ArrowUpDown className="h-4 w-4 ml-1" />
+                      </Button>
+                    </TableHead>
+                    <TableHead className="hidden md:table-cell text-xs sm:text-sm">
+                      <Button
+                        variant="ghost"
                         onClick={() => handleSort("weight")}
                       >
                         Poids <ArrowUpDown className="h-4 w-4 ml-1" />
+                      </Button>
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell text-xs sm:text-sm">
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleSort("createdAt")}
+                      >
+                        Créé le <ArrowUpDown className="h-4 w-4 ml-1" />
                       </Button>
                     </TableHead>
                     <TableHead className="text-xs sm:text-sm">
@@ -310,17 +283,38 @@ export default function ProductTable({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedProducts.length > 0 ? (
-                    paginatedProducts.map((product) => (
+                  {data.products.length > 0 ? (
+                    data.products.map((product) => (
                       <TableRow key={product.id}>
                         <TableCell className="text-xs sm:text-sm font-medium">
                           {product.name}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs sm:text-sm">
+                          {product.categories?.[0]?.name ?? "Non catégorisé"}
                         </TableCell>
                         <TableCell className="text-xs sm:text-sm">
                           {product.price.toLocaleString()} GNF
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-xs sm:text-sm">
+                          <Badge
+                            variant={
+                              product.stockStatus === "in_stock"
+                                ? "success"
+                                : "warning"
+                            }
+                          >
+                            {product.stockStatus === "in_stock"
+                              ? "En stock"
+                              : "Épuisé"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-xs sm:text-sm">
                           {product.weight} g
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs sm:text-sm">
+                          {product.createdAt
+                            ? format(new Date(product.createdAt), "dd/MM/yyyy")
+                            : "N/A"}
                         </TableCell>
                         <TableCell className="text-xs sm:text-sm">
                           <div className="flex items-center gap-2">
@@ -362,7 +356,7 @@ export default function ProductTable({
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={7}
                         className="text-center text-sm text-gray-500 py-4"
                       >
                         Aucun produit trouvé
@@ -374,8 +368,8 @@ export default function ProductTable({
             </div>
 
             <div className="block sm:hidden space-y-4 p-4">
-              {paginatedProducts.length > 0 ? (
-                paginatedProducts.map((product) => (
+              {data.products.length > 0 ? (
+                data.products.map((product) => (
                   <Card key={product.id} className="p-4">
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
@@ -385,6 +379,9 @@ export default function ProductTable({
                         </p>
                         <p className="text-xs text-gray-500">
                           Poids: {product.weight} g
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Stock: {product.stock?.stockLevel ?? "N/A"}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -433,24 +430,16 @@ export default function ProductTable({
         </Card>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex justify-center mt-4 gap-2 items-center">
+      {data.nextCursor && !isLoading && (
+        <div className="w-full flex justify-center mt-4 gap-2 items-center">
           <Button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
+            onClick={handlePageChange}
+            disabled={isLoading}
             size="sm"
+            variant="outline"
+            className="bg-gray-100 hover:bg-gray-200"
           >
-            Précédent
-          </Button>
-          <span className="text-xs sm:text-sm">
-            Page {currentPage} sur {totalPages}
-          </span>
-          <Button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages || !data.nextCursor}
-            size="sm"
-          >
-            Suivant
+            Charger plus
           </Button>
         </div>
       )}

@@ -32,6 +32,15 @@ import {
 } from "@/features/products/api/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Trash2 } from "lucide-react";
+
+// Schéma Zod (inchangé)
+const variantSchema = z.object({
+  variantType: z.string().min(1, "Type requis").max(50),
+  variantValue: z.string().min(1, "Valeur requise").max(50),
+  price: z.number().int().min(0, "Prix doit être positif"),
+  stock: z.number().int().min(0, "Stock doit être positif"),
+});
 
 const productSchema = z.object({
   name: z
@@ -42,18 +51,7 @@ const productSchema = z.object({
   weight: z.number().int().min(0, "Le poids doit être positif"),
   description: z.string().optional(),
   imageUrls: z.array(z.string().url("URL invalide")).optional(),
-  variantType: z.string().min(1, "Type de variante requis").max(50).optional(),
-  variantValue: z
-    .string()
-    .min(1, "Valeur de variante requise")
-    .max(50)
-    .optional(),
-  variantPrice: z
-    .number()
-    .int()
-    .min(0, "Prix de variante doit être positif")
-    .optional(),
-  variantStock: z.number().int().min(0, "Stock doit être positif").optional(),
+  variants: z.array(variantSchema).optional(),
   categoryId: z.number().int().min(1, "Catégorie invalide").optional(),
   promotionId: z.number().int().min(1, "Promotion invalide").optional(),
   stockLevel: z.number().int().min(0, "Le stock doit être positif"),
@@ -65,8 +63,8 @@ interface ProductFormProps {
   storeId: number;
   categories: ProductCategory[];
   promotions: Promotion[];
-  initialData?: Product | any;
-  onSuccess?: () => void;
+  initialData?: Product | null | any; // Permettre null explicitement
+  onSuccess?: (productId?: number) => void; // Ajouter productId en retour
 }
 
 export default function CreateProductForm({
@@ -79,24 +77,21 @@ export default function CreateProductForm({
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
-  const isEditing = !!initialData;
+  const isEditing = !!initialData && !!initialData?.id; // Vérification explicite
   const totalSteps = 5;
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: initialData
       ? {
-          name: initialData.name,
-          price: initialData.price,
-          weight: initialData.weight,
+          name: initialData.name || "",
+          price: initialData.price || 0,
+          weight: initialData.weight || 10,
           description: initialData.description || "",
           imageUrls: initialData.images?.map((img) => img.imageUrl) || [],
-          variantType: initialData.variants?.[0]?.variantType || "",
-          variantValue: initialData.variants?.[0]?.variantValue || "",
-          variantPrice: initialData.variants?.[0]?.price || 0,
-          variantStock: initialData.variants?.[0]?.stock || 0,
+          variants: initialData.variants || [],
           categoryId: initialData.categories?.[0]?.id,
-          promotionId: initialData.promotions?.[0]?.promotion.id,
+          promotionId: initialData.promotions?.[0]?.promotion?.id,
           stockLevel: initialData.stock?.stockLevel || 0,
         }
       : {
@@ -105,10 +100,7 @@ export default function CreateProductForm({
           weight: 10,
           description: "",
           imageUrls: [],
-          variantType: "",
-          variantValue: "",
-          variantPrice: 0,
-          variantStock: 0,
+          variants: [],
           categoryId: undefined,
           promotionId: undefined,
           stockLevel: 0,
@@ -130,10 +122,7 @@ export default function CreateProductForm({
         });
       case 3:
         return z.object({
-          variantType: productSchema.shape.variantType,
-          variantValue: productSchema.shape.variantValue,
-          variantPrice: productSchema.shape.variantPrice,
-          variantStock: productSchema.shape.variantStock,
+          variants: productSchema.shape.variants,
         });
       case 4:
         return z.object({
@@ -173,7 +162,7 @@ export default function CreateProductForm({
   const onSubmit = async (data: ProductFormValues) => {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
-      if (key === "imageUrls") {
+      if (key === "imageUrls" || key === "variants") {
         formData.append(key, JSON.stringify(value || []));
       } else if (value !== undefined && value !== null) {
         formData.append(key, String(value));
@@ -182,19 +171,21 @@ export default function CreateProductForm({
 
     try {
       let success = false;
+      let newProductId: number | undefined;
+
       if (isEditing && initialData?.id) {
         await updateProduct(initialData.id, storeId, formData);
         success = true;
       } else {
-        await createProduct(storeId, formData);
+        const newProduct = await createProduct(storeId, formData); // Retourner l'ID
+        newProductId = newProduct.id;
         success = true;
       }
 
       if (success) {
-        router.refresh(); // Ensure page is revalidated
+        router.refresh();
         if (onSuccess) {
-          console.log("Calling onSuccess after successful operation");
-          onSuccess(); // Call onSuccess only after successful operation
+          onSuccess(newProductId); // Passer l'ID du nouveau produit
         }
       }
     } catch (err) {
@@ -202,11 +193,27 @@ export default function CreateProductForm({
         err instanceof Error ? err.message : "Erreur inconnue";
       console.error("Erreur lors de la soumission:", errorMessage);
       setError(
-        `Une erreur est survenue lors de la ${
+        `Erreur lors de la ${
           isEditing ? "mise à jour" : "création"
-        } du produit: ${errorMessage}`
+        }: ${errorMessage}`
       );
     }
+  };
+
+  const addVariant = () => {
+    const currentVariants = form.getValues("variants") || [];
+    form.setValue("variants", [
+      ...currentVariants,
+      { variantType: "", variantValue: "", price: 0, stock: 0 },
+    ]);
+  };
+
+  const removeVariant = (index: number) => {
+    const currentVariants = form.getValues("variants") || [];
+    form.setValue(
+      "variants",
+      currentVariants.filter((_, i) => i !== index)
+    );
   };
 
   const stepTitles = [
@@ -216,6 +223,7 @@ export default function CreateProductForm({
     "Catégorie & Promotion",
     "Images",
   ];
+  const hasVariants = (form.watch("variants") || []).length > 0;
 
   return (
     <div className="py-6">
@@ -294,27 +302,38 @@ export default function CreateProductForm({
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="stockLevel"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Stock</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="Ex. 20"
-                              {...field}
-                              value={field.value}
-                              onChange={(e) =>
-                                field.onChange(Number(e.target.value))
-                              }
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {!hasVariants && (
+                      <FormField
+                        control={form.control}
+                        name="stockLevel"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Stock</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="Ex. 20"
+                                {...field}
+                                value={field.value}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
+                                disabled={hasVariants}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                    {hasVariants && (
+                      <div className="text-sm text-muted-foreground">
+                        Stock total calculé à partir des variantes :{" "}
+                        {form
+                          .watch("variants")
+                          ?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -341,79 +360,108 @@ export default function CreateProductForm({
 
               {step === 3 && (
                 <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Variante (optionnel)
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="variantType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Type (ex. Couleur)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex. Couleur" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="variantValue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Valeur (ex. Noir)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex. Noir" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="variantPrice"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Prix (GNF)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="Ex. 750000"
-                              {...field}
-                              value={field.value}
-                              onChange={(e) =>
-                                field.onChange(Number(e.target.value))
-                              }
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="variantStock"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Stock</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="Ex. 10"
-                              {...field}
-                              value={field.value}
-                              onChange={(e) =>
-                                field.onChange(Number(e.target.value))
-                              }
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-muted-foreground">
+                      Variantes (optionnel)
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addVariant}
+                    >
+                      Ajouter une variante
+                    </Button>
                   </div>
+                  {form.watch("variants")?.map((variant, index) => (
+                    <div
+                      key={index}
+                      className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end"
+                    >
+                      <FormField
+                        control={form.control}
+                        name={`variants.${index}.variantType`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Type</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex. Couleur" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`variants.${index}.variantValue`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Valeur</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex. Noir" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`variants.${index}.price`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prix (GNF)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="Ex. 750000"
+                                {...field}
+                                value={field.value}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`variants.${index}.stock`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Stock</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="Ex. 10"
+                                {...field}
+                                value={field.value}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => removeVariant(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  {(!form.watch("variants") ||
+                    form.watch("variants")?.length === 0) && (
+                    <p className="text-sm text-muted-foreground">
+                      Aucune variante ajoutée. Cliquez sur "Ajouter une
+                      variante" pour commencer.
+                    </p>
+                  )}
                 </div>
               )}
 
