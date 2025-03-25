@@ -37,50 +37,57 @@ export default function AppSidebar({
   const navMainItems = [
     {
       title: "Accueil",
-      url: "/sellers/overview",
+      url: "/sellers",
       icon: <Home className="h-4 w-4" />,
-      isActive: pathname === "/sellers/overview",
+      isActive: pathname === "/sellers",
     },
     {
       title: "Produits",
       url: "/sellers/products",
       icon: <Package className="h-4 w-4" />,
+      isActive: pathname === "/sellers/products",
       count: layoutData.products.total,
     },
     {
       title: "Commandes",
       url: "/sellers/orders",
       icon: <Truck className="h-4 w-4" />,
+      isActive: pathname === "/sellers/orders",
       count: layoutData.orders.inProgress + layoutData.orders.completed,
     },
     {
       title: "Livreurs",
       url: "/sellers/drivers",
       icon: <Truck className="h-4 w-4" />,
+      isActive: pathname === "/sellers/drivers",
       count: layoutData.drivers.total,
     },
     {
       title: "Finances",
       url: "/sellers/finances",
       icon: <DollarSign className="h-4 w-4" />,
+      isActive: pathname === "/sellers/finances",
       count: layoutData.orders.completed,
     },
     {
       title: "Support",
       url: "/sellers/support",
       icon: <HelpCircle className="h-4 w-4" />,
+      isActive: pathname === "/sellers/support",
       count: layoutData.supportTickets.total,
     },
     {
       title: "Promotions",
       url: "/sellers/promotions",
       icon: <Percent className="h-4 w-4" />,
+      isActive: pathname === "/sellers/promotions",
       count: layoutData.promotions.total,
     },
     {
       title: "Rapports",
       url: "/sellers/reports",
       icon: <BarChart className="h-4 w-4" />,
+      isActive: pathname === "/sellers/reports",
       count: layoutData.reports.total,
     },
   ];
@@ -90,11 +97,13 @@ export default function AppSidebar({
       title: "Profil",
       url: "/sellers/profile",
       icon: <Home className="h-4 w-4" />,
+      isActive: pathname === "/sellers/profile",
     },
     {
       title: "Paramètres",
       url: "/sellers/settings",
       icon: <DollarSign className="h-4 w-4" />,
+      isActive: pathname === "/sellers/settings",
     },
   ];
 

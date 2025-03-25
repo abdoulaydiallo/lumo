@@ -1,7 +1,7 @@
 // @/lib/db/search.engine.ts
 // Author: Abdoulaye Diallo
 // Date: 10/03/2025
-// Description: Moteur de recherche optimisé pour les produits avec pagination par curseur et mise en cache Redis.
+// Description: Moteur de recherche optimisé pour les produits avec pagination par curseur et mise en cache Redis optionnelle.
 
 import { and, sql, SQL } from "drizzle-orm";
 import { db } from "./";
@@ -78,6 +78,7 @@ export interface SearchParams {
   filters?: SearchFilters;
   sort?: SortOption;
   pagination?: Pagination;
+  useCache?: boolean; // Nouvelle option pour activer/désactiver le cache
 }
 
 export interface SearchResult {
@@ -128,7 +129,6 @@ function getSortValue(product: Product, sort: SortOption): string {
 /**
  * Construit les conditions SQL WHERE en fonction des filtres et du curseur composite.
  */
-
 function buildWhereConditions(filters: SearchFilters, sort: SortOption, cursor?: Pagination["cursor"]): SQL[] {
   const conditions: SQL[] = [];
 
@@ -373,19 +373,22 @@ function buildOrderBy(sort: SortOption, searchTerm?: string): SQL {
 }
 
 /**
- * Recherche des produits avec filtres, tri et pagination par curseur, avec mise en cache Redis.
+ * Recherche des produits avec filtres, tri et pagination par curseur, avec mise en cache Redis optionnelle.
  */
 export async function searchProducts({
   filters = {},
   sort = "relevance",
   pagination = { limit: 8, cursor: null },
+  useCache = true, // Par défaut, le cache est activé
 }: SearchParams = {}): Promise<SearchResult> {
   const cacheKey = `search:${JSON.stringify({ filters, sort, pagination })}`;
 
   try {
-    const cachedResult = await redis.get(cacheKey);
-    if (cachedResult) {
-      return cachedResult as SearchResult;
+    if (useCache) {
+      const cachedResult = await redis.get(cacheKey);
+      if (cachedResult) {
+        return cachedResult as SearchResult;
+      }
     }
 
     if (pagination.limit <= 0) {
@@ -514,7 +517,9 @@ export async function searchProducts({
       },
     };
 
-    await redis.set(cacheKey, result, { ex: 300 });
+    if (useCache) {
+      await redis.set(cacheKey, result, { ex: 300 });
+    }
     return result;
   } catch (error: unknown) {
     console.error("Erreur lors de la recherche des produits :", error);
@@ -524,18 +529,21 @@ export async function searchProducts({
 }
 
 /**
- * Récupère des suggestions de recherche basées sur un terme partiel.
+ * Récupère des suggestions de recherche basées sur un terme partiel, avec cache optionnel.
  * @param query Terme de recherche partiel (minimum 2 caractères).
  * @param limit Nombre maximum de suggestions (par défaut 8).
+ * @param useCache Activer ou désactiver le cache (par défaut true).
  * @returns Liste de suggestions.
  */
-export async function getSearchSuggestions(query: string, limit: number = 8): Promise<SuggestionResult> {
+export async function getSearchSuggestions(query: string, limit: number = 8, useCache: boolean = true): Promise<SuggestionResult> {
   const cacheKey = `suggestions:${query.toLowerCase().trim()}:${limit}`;
 
   try {
-    const cachedSuggestions = await redis.get(cacheKey);
-    if (cachedSuggestions) {
-      return cachedSuggestions as SuggestionResult;
+    if (useCache) {
+      const cachedSuggestions = await redis.get(cacheKey);
+      if (cachedSuggestions) {
+        return cachedSuggestions as SuggestionResult;
+      }
     }
 
     if (!query?.trim() || query.trim().length < 2) {
@@ -568,7 +576,9 @@ export async function getSearchSuggestions(query: string, limit: number = 8): Pr
     const suggestions = result.map((item) => item.name);
 
     const suggestionResult: SuggestionResult = { suggestions };
-    await redis.set(cacheKey, suggestionResult, { ex: 300 });
+    if (useCache) {
+      await redis.set(cacheKey, suggestionResult, { ex: 300 });
+    }
 
     return suggestionResult;
   } catch (error: unknown) {
@@ -588,6 +598,9 @@ export async function invalidateSuggestionsCache(query: string) {
   }
 }
 
+/**
+ * Invalide le cache des produits.
+ */
 export async function invalidateProductCache(productId: number) {
   const cacheKeys: any = await redis.keys(`search:*"id":${productId}*`);
   if (cacheKeys.length > 0) {

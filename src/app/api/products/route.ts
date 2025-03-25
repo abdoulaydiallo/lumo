@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { FilterOptions, getProductsWithFiltersAndPagination } from "@/features/products/api/queries";
 import { SortOption } from "@/lib/db/search.engine";
+import { deleteProduct } from "@/features/products/api/actions"; // Import de la fonction deleteProduct
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -28,5 +29,29 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Erreur dans GET /api/products:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const productId = searchParams.get("productId") ? Number(searchParams.get("productId")) : null;
+  const storeId = searchParams.get("storeId") ? Number(searchParams.get("storeId")) : null;
+
+  if (!productId || !storeId) {
+    return NextResponse.json(
+      { error: "productId et storeId sont requis" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    await deleteProduct(productId, storeId);
+    return NextResponse.json({ message: "Produit supprimé avec succès" }, { status: 200 });
+  } catch (error) {
+    console.error("Erreur dans DELETE /api/products:", error);
+    return NextResponse.json(
+      { error: "Échec de la suppression du produit" },
+      { status: 500 }
+    );
   }
 }

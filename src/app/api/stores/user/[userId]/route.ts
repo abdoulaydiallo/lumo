@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getStoreByUserId } from "@/features/stores/api/queries";
 
 export async function GET(
+  request: Request,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   const resolvedParams = await params;

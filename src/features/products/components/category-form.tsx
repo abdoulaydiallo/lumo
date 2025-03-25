@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createCategory } from "@/features/products/api/actions";
 import {
   Form,
   FormControl,
@@ -18,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { createCategory } from "../api/actions";
 
 const categorySchema = z.object({
   name: z.string().min(3, "Le nom doit contenir au moins 3 caractères").max(50),
@@ -25,7 +25,7 @@ const categorySchema = z.object({
     .string()
     .max(255, "La description ne doit pas dépasser 255 caractères")
     .optional(),
-  icon: z.string().url("L’icône doit être une URL valide").optional(),
+  icon: z.string().url("L'icône doit être une URL valide").optional(),
 });
 
 type CategoryFormValues = z.infer<typeof categorySchema>;

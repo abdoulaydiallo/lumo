@@ -168,3 +168,42 @@ export async function createCategory(storeId: number, formData: FormData) {
   } as any);
 }
 
+export async function deleteProduct(productId: number, storeId: number) {
+  try {
+    // Vérifier que le produit appartient au magasin spécifié
+    const product = await db
+      .select()
+      .from(products)
+      .where(and(eq(products.id, productId), eq(products.storeId, storeId)))
+      .limit(1);
+
+    if (!product.length) {
+      throw new Error("Produit non trouvé ou non autorisé pour ce magasin");
+    }
+
+    // Supprimer les données associées dans les tables liées
+    await db
+      .delete(productImages)
+      .where(eq(productImages.productId, productId));
+    await db
+      .delete(productVariants)
+      .where(eq(productVariants.productId, productId));
+    await db
+      .delete(productCategoryRelation)
+      .where(eq(productCategoryRelation.productId, productId));
+    await db
+      .delete(productPromotions)
+      .where(eq(productPromotions.productId, productId));
+    await db
+      .delete(productStocks)
+      .where(eq(productStocks.productId, productId));
+
+    // Supprimer le produit lui-même
+    await db
+      .delete(products)
+      .where(and(eq(products.id, productId), eq(products.storeId, storeId)));
+  } catch (error) {
+    console.error("Erreur lors de la suppression du produit:", error);
+    throw new Error("Échec de la suppression du produit");
+  }
+}
