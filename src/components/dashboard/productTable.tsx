@@ -34,14 +34,9 @@ import {
 import CreateProductForm from "./CreateProductForm";
 import ProductCard from "./ProductCard";
 import ProductFilters from "./ProductFilters"; // Ajout de ProductFilters
-import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Badge } from "../shared/Badge";
 import { TableSkeleton } from "./TableSkeleton";
-
-const Skeleton = ({ className }: { className?: string }) => (
-  <div className={`animate-pulse bg-gray-200 rounded-md ${className}`}></div>
-);
 
 interface ProductTableProps {
   initialProducts: SearchResult;
@@ -52,11 +47,11 @@ export default function ProductTable({
   initialProducts,
   storeId,
 }: ProductTableProps) {
-  const router = useRouter();
+
   const initialParams: SearchParams = {
     filters: { storeId },
     pagination: { limit: 5, cursor: null },
-    sort: "relevance",
+    sort: "newest",
     useCache: false,
   };
 
@@ -196,7 +191,7 @@ export default function ProductTable({
           </DialogTrigger>
           <DialogContentBase>
             <DialogHeader>
-              <DialogTitleBase>Ajouter un produit</DialogTitleBase>
+              <DialogTitleBase>Formulaire de produit</DialogTitleBase>
             </DialogHeader>
             <CreateProductForm
               storeId={storeId}
@@ -258,7 +253,7 @@ export default function ProductTable({
                         variant="ghost"
                         onClick={() => handleSort("stockLevel")}
                       >
-                        Stock <ArrowUpDown className="h-4 w-4 ml-1" />
+                        Status <ArrowUpDown className="h-4 w-4 ml-1" />
                       </Button>
                     </TableHead>
                     <TableHead className="hidden md:table-cell text-xs sm:text-sm">
@@ -266,7 +261,7 @@ export default function ProductTable({
                         variant="ghost"
                         onClick={() => handleSort("weight")}
                       >
-                        Poids <ArrowUpDown className="h-4 w-4 ml-1" />
+                        Stock <ArrowUpDown className="h-4 w-4 ml-1" />
                       </Button>
                     </TableHead>
                     <TableHead className="hidden lg:table-cell text-xs sm:text-sm">
@@ -309,7 +304,8 @@ export default function ProductTable({
                           </Badge>
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-xs sm:text-sm">
-                          {product.weight} g
+                          {product.stock?.availableStock} /{" "}
+                          {product.stock?.stockLevel}{" "}
                         </TableCell>
                         <TableCell className="hidden lg:table-cell text-xs sm:text-sm">
                           {product.createdAt
@@ -448,7 +444,7 @@ export default function ProductTable({
         <DialogContentBase className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitleBase>
-              Détails du produit : {selectedProduct?.name}
+              Visualisation du produit : {selectedProduct?.name}
             </DialogTitleBase>
           </DialogHeader>
           {selectedProduct && (
@@ -460,7 +456,7 @@ export default function ProductTable({
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContentBase className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitleBase>Modifier le produit</DialogTitleBase>
+            <DialogTitleBase>Formulaire de produit</DialogTitleBase>
           </DialogHeader>
           {selectedProduct && (
             <CreateProductForm
