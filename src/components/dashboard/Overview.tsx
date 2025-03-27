@@ -33,7 +33,7 @@ export default function Overview({ initialData }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Revenu estimé"
-          value={`${metrics.revenue.toLocaleString()} GNF`}
+          value={`${parseInt(metrics.revenue).toLocaleString()} GNF`}
           trend="up"
           percentage={metrics.deliveredPercentage}
           description="Sur livraisons"
