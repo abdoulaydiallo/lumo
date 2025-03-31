@@ -31,7 +31,7 @@ export default function Navbar({
       user,
       notifications: notifications ?? [],
       stores: [],
-      orders: { inProgress: 0, completed: 0 },
+      orders: { inProgress: 0, completed: 0, total: 0 },
       products: { total: 0 },
       drivers: { total: 0 },
       supportTickets: { total: 0 },

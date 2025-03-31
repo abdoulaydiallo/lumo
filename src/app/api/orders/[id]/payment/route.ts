@@ -1,61 +1,97 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import orderService, { ValidPaymentStatus } from "@/services/orders.service";
-import { ServiceError, ERROR_CODES } from "@/services/orders.errors";
-
-type ApiResponse<T> =
-  | { success: true; data: T }
-  | { success: false; error: ReturnType<ServiceError["toJSON"]> };
+import { ServiceError } from "@/services/orders.errors";
 
 export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<NextResponse<ApiResponse<any>>> {
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const user = await getUser();
-    if (!user) {
-      throw new ServiceError(ERROR_CODES.AUTHORIZATION_ERROR, "Utilisateur non authentifié");
-    }
-    const callerUserId = user.id;
+    // Résolution des paramètres (nouvelle approche)
+    const resolvedParams = await params;
+    const orderId = Number(resolvedParams.id);
 
-    // Seuls les admins peuvent mettre à jour le statut de paiement
-    if (user.role !== "admin") {
-      throw new ServiceError(
-        ERROR_CODES.AUTHORIZATION_ERROR,
-        "Seul un admin peut mettre à jour le statut de paiement"
+    // Validation de l'ID
+    if (isNaN(orderId) || orderId <= 0) {
+      return NextResponse.json(
+        { error: "ID de commande invalide" },
+        { status: 400 }
       );
     }
 
-    const orderId = parseInt(params.id, 10);
-    const body = await req.json();
-    const { status, transactionId } = body;
-
-    if (isNaN(orderId) || orderId <= 0) {
-      throw new ServiceError(ERROR_CODES.VALIDATION_ERROR, "ID de commande invalide");
+    // Authentification
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "Utilisateur non authentifié" },
+        { status: 401 }
+      );
     }
+
+    // Vérification des droits admin
+    if (user.role !== "admin") {
+      return NextResponse.json(
+        { error: "Action réservée aux administrateurs" },
+        { status: 403 }
+      );
+    }
+
+    // Extraction des données
+    const { status, transactionId } = await request.json();
+
+    // Validation des données
     if (!status || typeof status !== "string") {
-      throw new ServiceError(ERROR_CODES.VALIDATION_ERROR, "Statut de paiement invalide ou manquant");
-    }
-    if (transactionId && typeof transactionId !== "string") {
-      throw new ServiceError(ERROR_CODES.VALIDATION_ERROR, "transactionId doit être une chaîne");
+      return NextResponse.json(
+        { error: "Statut de paiement invalide ou manquant" },
+        { status: 400 }
+      );
     }
 
+    if (transactionId && typeof transactionId !== "string") {
+      return NextResponse.json(
+        { error: "transactionId doit être une chaîne" },
+        { status: 400 }
+      );
+    }
+
+    // Mise à jour du statut
     const result = await orderService.updatePaymentStatus(
       orderId,
       status as ValidPaymentStatus,
       transactionId,
-      callerUserId
+      user.id
     );
+
     return NextResponse.json({ success: true, data: result }, { status: 200 });
-  } catch (error: unknown) {
+
+  } catch (error) {
+    console.error("Erreur dans PATCH /orders/[id]/payment:", error);
+    
     if (error instanceof ServiceError) {
-      return NextResponse.json({ success: false, error: error.toJSON() }, { status: 400 });
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: {
+            code: error.code,
+            message: error.message,
+            details: error.details
+          }
+        },
+        { status: 400 }
+      );
     }
-    const internalError = new ServiceError(
-      ERROR_CODES.INTERNAL_SERVER_ERROR,
-      "Erreur serveur inattendue",
-      { originalError: error instanceof Error ? error.message : String(error) }
+
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Erreur serveur inattendue",
+          details: error instanceof Error ? error.message : "Erreur inconnue"
+        }
+      },
+      { status: 500 }
     );
-    return NextResponse.json({ success: false, error: internalError.toJSON() }, { status: 500 });
   }
 }
