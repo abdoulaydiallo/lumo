@@ -1,6 +1,13 @@
-import { Card } from "../ui/card";
-import { Skeleton } from "../ui/skeleton";
-import { TableHeader, TableRow, TableHead, TableBody, TableCell, Table } from "../ui/table";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+  Table
+} from "@/components/ui/table";
 
 export const TableSkeleton = () => { 
     return (

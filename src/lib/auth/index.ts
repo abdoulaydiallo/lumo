@@ -164,5 +164,7 @@ export async function getUser() {
     id: Number(session.user.id), // Converti en nombre pour correspondre au schema Drizzle
     email: session.user.email,
     name: session.user.name,
+    role: session.user.role,
+    image: session.user.image,
   };
 }

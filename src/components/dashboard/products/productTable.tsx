@@ -35,7 +35,7 @@ import CreateProductForm from "./CreateProductForm";
 import ProductCard from "./ProductCard";
 import ProductFilters from "./ProductFilters"; // Ajout de ProductFilters
 import { format } from "date-fns";
-import { Badge } from "../shared/Badge";
+import { Badge } from "../../shared/Badge";
 import { TableSkeleton } from "./TableSkeleton";
 
 interface ProductTableProps {

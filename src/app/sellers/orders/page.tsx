@@ -1,11 +1,15 @@
-// app/orders/page.tsx
-import OrderTable from "@/components/dashboard/sellers/OrderTable";
-import { OrderSortOption, searchOrders } from "@/lib/db/order.search.engine";
+// @/app/sellers/orders/page.tsx
+export const dynamic = "force-dynamic";
+
+import OrderTable from "@/components/dashboard/orders/OrderTable";
+import { getInitialOrders } from "@/features/orders/api/queries";
+import { getUser } from "@/lib/auth";
 import {
   orderStatuses,
   paymentStatuses,
   paymentMethods,
 } from "@/lib/db/schema";
+import { redirect } from "next/navigation";
 
 interface SearchParams {
   status?: string;
@@ -25,50 +29,34 @@ interface SearchParams {
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }) {
-  // Transformation des searchParams en filtres pour searchOrders
-  const filters = {
-    status: searchParams.status?.split(","),
-    paymentStatus: searchParams.paymentStatus?.split(","),
-    paymentMethod: searchParams.paymentMethod?.split(","),
-    userId: searchParams.userId ? parseInt(searchParams.userId) : undefined,
-    storeId: searchParams.storeId ? parseInt(searchParams.storeId) : undefined,
-    driverId: searchParams.driverId
-      ? parseInt(searchParams.driverId)
-      : undefined,
-    dateRange:
-      searchParams.startDate && searchParams.endDate
-        ? {
-            start: new Date(searchParams.startDate),
-            end: new Date(searchParams.endDate),
-          }
-        : undefined,
-    searchTerm: searchParams.searchTerm,
-  };
+  const user = await getUser();
 
-  const sort = (searchParams.sort as OrderSortOption) || "newest";
-  const page = searchParams.page ? parseInt(searchParams.page) : 1;
-  const perPage = searchParams.perPage ? parseInt(searchParams.perPage) : 10;
+  if (!user?.id || user?.role !== "store") {
+    redirect("/marketplace/products");
+  }
 
-  // Exécution de la recherche côté serveur
-  const results = await searchOrders({
-    filters,
-    sort,
-    pagination: { page, perPage },
-  });
+  // Await the searchParams to resolve its values
+  const resolvedSearchParams = await searchParams;
+
+  const initialData = await getInitialOrders(
+    Number(user.id),
+    user.role as "store",
+    resolvedSearchParams
+  );
 
   return (
     <OrderTable
-      initialOrders={results.orders}
-      initialTotal={results.total}
-      initialPage={results.page}
-      initialTotalPages={results.totalPages}
+      searchParams={resolvedSearchParams} 
       statusOptions={orderStatuses.enumValues}
       paymentStatusOptions={paymentStatuses.enumValues}
       paymentMethodOptions={paymentMethods.enumValues}
-      initialFilters={filters}
-      initialSort={sort}
+      initialOrders={initialData.orders}
+      initialTotal={initialData.total}
+      initialPage={initialData.page}
+      initialTotalPages={initialData.total_pages}
+      initialStats={initialData.stats}
     />
   );
 }

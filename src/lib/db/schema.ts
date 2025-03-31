@@ -19,8 +19,8 @@ export const storeVerificationStatuses = pgEnum("store_verification_statuses", [
 export const stockStatuses = pgEnum("stock_statuses", ["in_stock", "low_stock", "out_of_stock"]);
 export const userStatus = pgEnum("user_status", ["pending", "active", "rejected"]);
 export const userRoles = pgEnum("user_roles", ["user", "driver", "store", "manager", "admin"]);
-export const orderStatuses = pgEnum("order_statuses", ["pending", "in_progress", "delivered"]);
-export const paymentStatuses = pgEnum("payment_statuses", ["pending", "paid", "failed"]);
+export const orderStatuses = pgEnum("order_statuses", ["pending", "in_progress", "delivered", "cancelled"]);
+export const paymentStatuses = pgEnum("payment_statuses", ["pending", "paid", "failed", "refunded"]);
 export const paymentMethods = pgEnum("payment_methods", ["orange_money", "mobile_money", "cash_on_delivery"]);
 export const reportStatuses = pgEnum("report_statuses", ["sales", "deliveries", "users", "driver_performance", "driver_revenue"]);
 export const shipmentStatuses = pgEnum("shipment_statuses", ["pending", "in_progress", "delivered", "failed"]);
@@ -215,6 +215,17 @@ export const drivers = pgTable(
     updatedAt: timestamp("updated_at").defaultNow(),
   },
 );
+
+// Table: returns
+export const returns = pgTable("returns", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }),
+  reason: text("reason").notNull(),
+  status: varchar("status", { length: 50 }).notNull().default("pending"),
+  returnTrackingId: varchar("return_tracking_id", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 // Table: shipments
 export const shipments = pgTable(
@@ -421,7 +432,6 @@ export const reviews = pgTable("reviews", {
 },
   (table) => [
     index("reviews_product_id_rating_idx").on(table.productId, table.rating),
-    unique("reviews_user_product_unique").on(table.userId, table.productId), // Nouvelle contrainte
   ]
 );
 
@@ -552,17 +562,6 @@ export const productPromotions = pgTable(
 );
 
 // 6. Tables de gestion des retours
-
-// Table: returns
-export const returns = pgTable("returns", {
-  id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  reason: text("reason").notNull(),
-  status: varchar("status", { length: 50 }).notNull().default("pending"),
-  returnTrackingId: varchar("return_tracking_id", { length: 100 }),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
 
 // Table: orderStatusHistory
 export const orderStatusHistory = pgTable("order_status_history", {

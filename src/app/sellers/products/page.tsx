@@ -1,5 +1,5 @@
 // @/app/sellers/products/page.tsx
-import ProductTable from "@/components/dashboard/productTable";
+import ProductTable from "@/components/dashboard/products/productTable";
 import { getStoreByUserId } from "@/features/stores/api/queries";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";

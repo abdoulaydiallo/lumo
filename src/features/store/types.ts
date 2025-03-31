@@ -20,7 +20,7 @@ export interface StoreLayoutData {
   user: User;
   stores: Store[];
   notifications: Notification[];
-  orders: { inProgress: number; completed: number };
+  orders: { inProgress: number; completed: number, total: number };
   products: { total: number };
   drivers: { total: number };
   supportTickets: { total: number };

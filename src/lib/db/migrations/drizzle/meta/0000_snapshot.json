@@ -1,5 +1,5 @@
 {
-  "id": "ba4bcf07-8ae5-49f7-9d26-ca1fc492f97b",
+  "id": "f3d6e341-2c40-4a83-a29d-111b6f509aba",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2784,16 +2784,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "reviews_user_product_unique": {
-          "name": "reviews_user_product_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "product_id"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -4137,7 +4128,8 @@
       "values": [
         "pending",
         "in_progress",
-        "delivered"
+        "delivered",
+        "cancelled"
       ]
     },
     "public.payment_methods": {
@@ -4155,7 +4147,8 @@
       "values": [
         "pending",
         "paid",
-        "failed"
+        "failed",
+        "refunded"
       ]
     },
     "public.report_statuses": {

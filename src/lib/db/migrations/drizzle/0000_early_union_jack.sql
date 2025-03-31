@@ -1,6 +1,6 @@
-CREATE TYPE "public"."order_statuses" AS ENUM('pending', 'in_progress', 'delivered');--> statement-breakpoint
+CREATE TYPE "public"."order_statuses" AS ENUM('pending', 'in_progress', 'delivered', 'cancelled');--> statement-breakpoint
 CREATE TYPE "public"."payment_methods" AS ENUM('orange_money', 'mobile_money', 'cash_on_delivery');--> statement-breakpoint
-CREATE TYPE "public"."payment_statuses" AS ENUM('pending', 'paid', 'failed');--> statement-breakpoint
+CREATE TYPE "public"."payment_statuses" AS ENUM('pending', 'paid', 'failed', 'refunded');--> statement-breakpoint
 CREATE TYPE "public"."report_statuses" AS ENUM('sales', 'deliveries', 'users', 'driver_performance', 'driver_revenue');--> statement-breakpoint
 CREATE TYPE "public"."shipment_statuses" AS ENUM('pending', 'in_progress', 'delivered', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."stock_statuses" AS ENUM('in_stock', 'low_stock', 'out_of_stock');--> statement-breakpoint
@@ -337,8 +337,7 @@ CREATE TABLE "reviews" (
 	"comment" text,
 	"verified" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	CONSTRAINT "reviews_user_product_unique" UNIQUE("user_id","product_id")
+	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "schedules" (
