@@ -36,7 +36,7 @@ export interface OrderInsert {
   originAddressId?: number;
   destinationAddressId?: number;
   totalDeliveryFee?: number;
-  totalAmount?: number;
+  paymentAmount?: number; // Renommé de totalAmount à paymentAmount
   paymentMethod?: ValidPaymentMethod;
   status?: ValidOrderStatus;
 }
@@ -79,13 +79,14 @@ async function logAuditAction(
   await tx.insert(auditLogs).values({
     userId,
     action,
-    details: JSON.parse(JSON.stringify(details)), // Assure une sérialisation propre
+    details: JSON.parse(JSON.stringify(details)),
     createdAt: new Date(),
   });
 }
 
 // Ajout de notification
-async function createNotification(tx: any, userId: number, message: string, type: string) {
+async function createNotification(tx: any, userId: number | null, message: string, type: string) {
+  if (!userId) return; // Ne crée pas de notification si userId est null
   await tx.insert(notifications).values({
     userId,
     message,
@@ -117,8 +118,8 @@ export const orderService = {
         if (!items.length) {
           throw new ServiceError(ERROR_CODES.VALIDATION_ERROR, "Aucun article fourni pour la commande");
         }
-        if (orderData.totalAmount && orderData.totalAmount < 0) {
-          throw new ServiceError(ERROR_CODES.VALIDATION_ERROR, "Le montant total ne peut pas être négatif");
+        if (orderData.paymentAmount && orderData.paymentAmount < 0) {
+          throw new ServiceError(ERROR_CODES.VALIDATION_ERROR, "Le montant du paiement ne peut pas être négatif");
         }
         if (orderData.paymentMethod) {
           validateEnum(orderData.paymentMethod, validPaymentMethods, "paymentMethod");
@@ -190,9 +191,9 @@ export const orderService = {
         }));
         await tx.insert(orderItems).values(orderItemsData);
 
-        if (orderData.paymentMethod && orderData.totalAmount !== undefined) {
+        if (orderData.paymentMethod && orderData.paymentAmount !== undefined) {
           await tx.insert(payments).values({
-            amount: Math.round(orderData.totalAmount),
+            amount: Math.round(orderData.paymentAmount),
             paymentMethod: orderData.paymentMethod,
             status: "pending",
             orderId: newOrder.id,
@@ -218,9 +219,9 @@ export const orderService = {
         );
       }
     });
-    },
-    
-async updateOrderStatus(orderId: number, status: ValidOrderStatus, callerUserId: number) {
+  },
+
+  async updateOrderStatus(orderId: number, status: ValidOrderStatus, callerUserId: number) {
     return db.transaction(async (tx) => {
       try {
         const [caller] = await tx.select({ role: users.role }).from(users).where(eq(users.id, callerUserId));
@@ -243,7 +244,7 @@ async updateOrderStatus(orderId: number, status: ValidOrderStatus, callerUserId:
           throw new ServiceError(ERROR_CODES.NOT_FOUND, `Commande avec l'ID ${orderId} non trouvée`);
         }
 
-        await createNotification(tx, updatedOrder.userId!, `Commande #${orderId} mise à jour: ${status}`, "order_status");
+        await createNotification(tx, updatedOrder.userId, `Commande #${orderId} mise à jour: ${status}`, "order_status");
         await logOrderStatusChange(tx, orderId, status, callerUserId);
         await logAuditAction(tx, callerUserId, "update_order_status", { orderId, newStatus: status });
 
@@ -290,8 +291,8 @@ async updateOrderStatus(orderId: number, status: ValidOrderStatus, callerUserId:
             .where(eq(orders.id, orderId))
             .returning();
           if (updatedOrder) {
-            await createNotification(tx, updatedOrder.userId!, `Statut de paiement: ${status}`, "payment_status");
-            await logOrderStatusChange(tx, orderId, newOrderStatus, callerUserId || updatedOrder.userId!);
+            await createNotification(tx, updatedOrder.userId, `Statut de paiement: ${status}`, "payment_status");
+            await logOrderStatusChange(tx, orderId, newOrderStatus, callerUserId || updatedOrder.userId || 0); // Fallback à 0 si null
           }
         }
 
@@ -326,7 +327,26 @@ async updateOrderStatus(orderId: number, status: ValidOrderStatus, callerUserId:
           throw new ServiceError(ERROR_CODES.NOT_FOUND, `Commande ${orderId} non trouvée`);
         }
         if (order.status === "cancelled") {
-          throw new ServiceError(ERROR_CODES.ALREADY_EXISTS, "Commande déjà annulée");
+           throw new ServiceError(ERROR_CODES.ALREADY_EXISTS, "Commande déjà annulée");
+        }
+
+        const [payment] = await tx
+          .select({ status: payments.status, paymentMethod: payments.paymentMethod })
+          .from(payments)
+          .where(eq(payments.orderId, orderId))
+          .limit(1);
+        if (payment && payment.status === "paid") {
+          // Validation métier : ne rembourse pas si paiement par cash_on_delivery
+          if (payment.paymentMethod === "cash_on_delivery") {
+            throw new ServiceError(
+              ERROR_CODES.VALIDATION_ERROR,
+              "Impossible d'annuler une commande payée à la livraison après paiement"
+            );
+          }
+          await tx
+            .update(payments)
+            .set({ status: "refunded", updatedAt: new Date() })
+            .where(eq(payments.orderId, orderId));
         }
 
         const [updatedOrder] = await tx
@@ -347,19 +367,7 @@ async updateOrderStatus(orderId: number, status: ValidOrderStatus, callerUserId:
             .where(eq(productStocks.productId, item.productId as number));
         }
 
-        const [payment] = await tx
-          .select({ status: payments.status })
-          .from(payments)
-          .where(eq(payments.orderId, orderId))
-          .limit(1);
-        if (payment && payment.status === "paid") {
-          await tx
-            .update(payments)
-            .set({ status: "refunded", updatedAt: new Date() })
-            .where(eq(payments.orderId, orderId));
-        }
-
-        await createNotification(tx, order.userId!, `Commande #${orderId} annulée`, "order_cancelled");
+        await createNotification(tx, order.userId, `Commande #${orderId} annulée`, "order_cancelled");
         await logOrderStatusChange(tx, orderId, "cancelled", callerUserId);
         await logAuditAction(tx, callerUserId, "cancel_order", { orderId });
 
@@ -414,7 +422,7 @@ async updateOrderStatus(orderId: number, status: ValidOrderStatus, callerUserId:
         throw new Error(`Commande ${orderId} non trouvée`);
       }
 
-      await createNotification(tx, updatedOrder.userId!, `Commande #${orderId} mise à jour par le vendeur: ${status}`, "order_status");
+      await createNotification(tx, updatedOrder.userId, `Commande #${orderId} mise à jour par le vendeur: ${status}`, "order_status");
       await logOrderStatusChange(tx, orderId, status, sellerUserId);
 
       return updatedOrder;
@@ -486,13 +494,13 @@ async updateOrderStatus(orderId: number, status: ValidOrderStatus, callerUserId:
         await logOrderStatusChange(tx, orderId, "in_progress", sellerUserId);
       }
 
-      await createNotification(tx, order.userId!, `Expédition créée pour la commande #${orderId}`, "shipment_created");
+      await createNotification(tx, order.userId, `Expédition créée pour la commande #${orderId}`, "shipment_created");
 
       return newShipment;
     });
   },
 
-async sellerUpdateShipmentStatus(shipmentId: number, status: ValidShipmentStatus, sellerUserId: number) {
+  async sellerUpdateShipmentStatus(shipmentId: number, status: ValidShipmentStatus, sellerUserId: number) {
     return db.transaction(async (tx) => {
       try {
         await checkUserRole(sellerUserId, "store");
@@ -576,11 +584,12 @@ async sellerUpdateShipmentStatus(shipmentId: number, status: ValidShipmentStatus
               .where(eq(orders.id, orderId))
               .returning();
             await logOrderStatusChange(tx, orderId, newOrderStatus, sellerUserId);
-            await createNotification(tx, order.userId!, `Commande #${orderId} ${newOrderStatus}`, "order_status");
+            await createNotification(tx, order.userId, `Commande #${orderId} ${newOrderStatus}`, "order_status");
           }
         }
 
-        await createNotification(tx, (await tx.select({ userId: orders.userId }).from(orders).where(eq(orders.id, orderId)).limit(1))[0].userId!, `Expédition #${shipmentId} mise à jour: ${status}`, "shipment_status");
+        const [order] = await tx.select({ userId: orders.userId }).from(orders).where(eq(orders.id, orderId)).limit(1);
+        await createNotification(tx, order.userId, `Expédition #${shipmentId} mise à jour: ${status}`, "shipment_status");
         await logAuditAction(tx, sellerUserId, "update_shipment_status", { shipmentId, newStatus: status });
 
         return updatedShipment;
@@ -663,7 +672,8 @@ async sellerUpdateShipmentStatus(shipmentId: number, status: ValidShipmentStatus
         .where(eq(shipments.id, shipmentId))
         .returning();
 
-      await createNotification(tx, (await tx.select({ userId: orders.userId }).from(orders).where(eq(orders.id, orderId)).limit(1))[0].userId!, `Chauffeur assigné à l'expédition #${shipmentId}`, "shipment_status");
+      const [order] = await tx.select({ userId: orders.userId }).from(orders).where(eq(orders.id, orderId)).limit(1);
+      await createNotification(tx, order.userId, `Chauffeur assigné à l'expédition #${shipmentId}`, "shipment_status");
 
       return updatedShipment;
     });
