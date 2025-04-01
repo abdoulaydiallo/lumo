@@ -11,11 +11,11 @@ type ApiResponse<T> =
   | { success: false; error: ReturnType<ServiceError["toJSON"]> };
 
 export async function GET(
-  request: NextRequest, // Premier paramètre
-  { params }: { params: Promise<{ id: string }> } // Deuxième paramètre avec Promise
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse<any>>> {
-  const resolvedParams = await params; // Résolution de la Promise
-  const orderId = parseInt(resolvedParams.id, 10); // Accès à id après résolution
+  const resolvedParams = await params; 
+  const orderId = parseInt(resolvedParams.id, 10);
 
   try {
     const user = await getUser();

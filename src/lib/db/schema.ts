@@ -106,8 +106,7 @@ export const addresses = pgTable(
     location: jsonb("location").notNull(),
     postalCode: varchar("postal_code", { length: 10 }),
     region: varchar("region", { length: 50 }).notNull(),
-    latitude: numeric("latitude", { precision: 9, scale: 6 }),
-    longitude: numeric("longitude", { precision: 9, scale: 6 }),
+    coordinates: jsonb('coordinates'), // { lat: number, lng: number }
     photoUrl: text("photo_url"),
     deliveryInstructions: text("delivery_instructions"),
     formattedAddress: text("formatted_address"),

@@ -26,7 +26,7 @@ function validateOrderData(orderData: OrderInsert) {
   if (!orderData.userId || typeof orderData.userId !== "number" || orderData.userId <= 0) {
     throw new ServiceError(ERROR_CODES.VALIDATION_ERROR, "userId invalide ou manquant");
   }
-  if (orderData.totalAmount !== undefined && orderData.totalAmount < 0) {
+  if (orderData.paymentAmount !== undefined && orderData.paymentAmount < 0) {
     throw new ServiceError(ERROR_CODES.VALIDATION_ERROR, "totalAmount ne peut pas être négatif");
   }
 }

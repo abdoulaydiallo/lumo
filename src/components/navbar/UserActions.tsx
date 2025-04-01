@@ -120,7 +120,7 @@ export function UserActions({ className }: UserActionsProps) {
             )}
           </Link>
           <Link
-            href="/cart"
+            href="/marketplace/cart"
             className="p-1.5 hover:bg-muted/20 rounded-full relative"
           >
             <ShoppingCart
