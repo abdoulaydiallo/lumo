@@ -128,74 +128,120 @@ export interface OrderWithDetails extends Order {
 export type OrderStatusType = "pending" | "in_progress" | "delivered" | "cancelled";
 
 export interface OrderDetails {
-  id: string | number; // Identifiant de la commande
-  status: OrderStatusType; // Statut de la commande
-  createdAt: Date; // Date de création
-  estimatedDeliveryDate?: Date | null; // Date de livraison estimée (optionnelle)
-  elapsedMinutes?: number; // Temps écoulé en minutes (optionnel)
-  isDelayed?: boolean; // Indicateur de retard (optionnel)
+  id: string | number;
+  userId: number;
+  destinationAddressId: number;
+  status: OrderStatusType;
+  estimatedDeliveryDate?: Date | string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  elapsedMinutes?: number;
+  isDelayed?: boolean; // Non présent dans les données, mais conservé comme optionnel
   user: {
-    name?: string | null; // Nom de l'utilisateur (optionnel)
-    email?: string | null; // Email de l'utilisateur (optionnel)
-    phoneNumber?: string; // Numéro de téléphone (optionnel)
+    id: number;
+    name?: string | null;
+    email?: string | null;
+    phoneNumber?: string;
   };
-  originAddress?: {
-    recipient?: string; // Nom du destinataire
-    formattedAddress?: string; // Adresse formatée
-    deliveryInstructions?: string | null; // Instructions de livraison (optionnelles)
-    latitude?: number | null; // Latitude (optionnelle)
-    longitude?: number | null; // Longitude (optionnelle)
-    region?: string; // Région (optionnelle)
-  };
-  destinationAddress?: {
-    recipient?: string; // Nom du destinataire
-    formattedAddress?: string; // Adresse formatée
-    deliveryInstructions?: string | null; // Instructions de livraison (optionnelles)
-    latitude?: number | null; // Latitude (optionnelle)
-    longitude?: number | null; // Longitude (optionnelle)
-    region?: string; // Région (optionnelle)
-  };
-  items: Array<{
-    id: string | number; // Identifiant de l'article
-    product: {
-      name: string; // Nom du produit
-      currentStock?: number; // Stock actuel (optionnel)
+  storeOrders: Array<{
+    id: number;
+    orderId: number;
+    storeId: number;
+    subtotal: number;
+    deliveryFee: number;
+    total: number;
+    status: OrderStatusType;
+    shipmentId: number | null;
+    createdAt: string;
+    updatedAt: string;
+    store: {
+      id: number;
+      name: string;
     };
-    quantity: number; // Quantité
-    price: number; // Prix unitaire
+    originAddress?: {
+      id: number;
+      userId: number;
+      recipient?: string;
+      location?: {
+        type: string;
+        street: string;
+        commune: string;
+        district: string;
+        landmark: string;
+      };
+      region?: string;
+      formattedAddress?: string;
+      postalCode?: string;
+      latitude?: number | null;
+      longitude?: number | null;
+      deliveryInstructions?: string | null;
+      photoUrl?: string;
+    };
+    destinationAddress?: {
+      id: number;
+      userId: number;
+      recipient?: string;
+      location?: {
+        type: string;
+        street: string;
+        commune: string;
+        district: string;
+        landmark: string;
+      };
+      region?: string;
+      formattedAddress?: string;
+      postalCode?: string;
+      latitude?: number | null;
+      longitude?: number | null;
+      deliveryInstructions?: string | null;
+      photoUrl?: string;
+    };
+    items: Array<{
+      id: number;
+      productId: number;
+      quantity: number;
+      price: number;
+      product: {
+        id: number;
+        name: string;
+        currentStock?: number;
+      };
+    }>;
+    payment?: {
+      id: number;
+      amount: number;
+      status: string;
+      paymentMethod: string;
+      transactionId?: string | null;
+      createdAt: Date | string;
+    };
+    deliveryFeeBreakdown?: {
+      baseFee: number;
+      distanceFee: number;
+      weightSurcharge?: number;
+    };
   }>;
-  driver?: {
-    name: string; // Nom du livreur
-    phoneNumber: string; // Numéro de téléphone
-    vehicleType: string; // Type de véhicule
-    currentLocation?: {
-      lat: number; // Latitude
-      lng: number; // Longitude
-    };
-  };
-  deliveryFeeBreakdown?: {
-    baseFee: number; // Frais de base
-    distanceFee: number; // Frais de distance
-    weightSurcharge?: number; // Surcharge pour le poids (optionnelle)
-  };
-  payment?: {
-    status: string; // Statut du paiement (ex. "paid", "pending")
-    paymentMethod: string; // Méthode de paiement
-    createdAt: Date; // Date de création du paiement
-    transactionId?: string | null; // ID de transaction (optionnel)
-    amount: number; // Montant payé
-  };
   statusHistory?: Array<{
-    status: OrderStatusType; // Statut dans l'historique
-    changedAt: Date; // Date du changement
+    status: OrderStatusType;
+    changedAt: Date | string;
     changedBy?: {
-      name: string; // Nom de la personne ayant effectué le changement
+      id: number;
+      name: string;
     };
   }>;
-  supportTicket?: {
-    id: string | number; // Numéro du ticket
-    status: string; // Statut du ticket (ex. "resolved", "pending")
-    lastUpdate: Date; // Date de dernière mise à jour
+  driver?: { // Conservé comme optionnel, bien qu'absent des données actuelles
+    name: string;
+    phoneNumber: string;
+    vehicleType: string;
+    currentLocation?: {
+      lat: number;
+      lng: number;
+    };
+  };
+  supportTicket?: { // Conservé comme optionnel
+    id: string | number;
+    status: string;
+    lastUpdate: Date | string;
   };
 }
 export interface OrderPagination {
@@ -622,7 +668,7 @@ export async function searchOrders(
   // Calcul des statistiques enrichies (basées sur payments pour le magasin)
   const statsQuery = await db
     .select({
-      total_amount: sql<number>`COALESCE(SUM(p.amount), 0)`,
+      total_amount: sql<number>`COALESCE(SUM(${payments.amount}), 0)`, // Correction ici
       pending_count: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} = 'pending')`,
       in_progress_count: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} = 'in_progress')`,
       delivered_count: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} = 'delivered')`,

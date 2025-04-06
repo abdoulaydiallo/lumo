@@ -24,7 +24,6 @@ import {
   Package,
   Clock,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -43,6 +42,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/shared/Badge";
 
 interface OrderListProps {
   orders: any[];
@@ -151,7 +151,7 @@ export default function OrderList({
           const config = statusConfig[status as keyof typeof statusConfig] || 
                         { variant: "secondary", icon: Clock, label: status };
           return (
-            <Badge variant={config.variant} className="text-xs gap-1">
+            <Badge variant={config.variant === "default" || config.variant === "outline" ? "secondary" : config.variant === "destructive" ? "warning" : config.variant} className="text-xs gap-1">
               <config.icon className="h-3 w-3" />
               {config.label}
             </Badge>
@@ -160,7 +160,7 @@ export default function OrderList({
         size: 120,
       },
       {
-        accessorFn: (row) => row.payment?.amount,
+        accessorFn: (row) => row.storeOrders[0].payment?.amount,
         id: "paymentAmount",
         header: ({ column }) => (
           <Button
@@ -180,11 +180,11 @@ export default function OrderList({
         size: 100,
       },
       {
-        accessorFn: (row) => row.payment?.paymentMethod,
+        accessorFn: (row) => row.storeOrders[0].payment?.paymentMethod,
         id: "paymentMethod",
         header: "Méthode",
         cell: ({ row }) => (
-          <Badge variant="outline" className="text-xs">
+          <Badge variant="secondary" className="text-xs">
             {row.getValue("paymentMethod") || "N/A"}
           </Badge>
         ),
