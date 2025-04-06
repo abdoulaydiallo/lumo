@@ -60,12 +60,12 @@ import { OrderStatus } from "./OrderStatus";
 import { Map } from "@/components/Map";
 import {
   OrderStatus as OrderStatusType,
-  OrderWithDetails,
+  OrderDetails
 } from "@/lib/db/orders.search";
 import { Duration } from "./Duration";
 
 interface OrderDetailsDialogProps {
-  order: OrderWithDetails | null;
+  order: OrderDetails | null;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   onStatusChange?: (newStatus: OrderStatusType) => Promise<void>;
@@ -170,16 +170,16 @@ export function OrderDetailsDialog({
       return { lat: 9.6412, lng: -13.5784 }; // Default to Conakry
     }
     return {
-      lat: parseFloat(order.originAddress.latitude),
-      lng: parseFloat(order.originAddress.longitude),
+      lat: order.originAddress.latitude,
+      lng: order.originAddress.longitude,
     };
   }, [order]);
 
   const originLocation = useMemo(() => {
     if (!order?.originAddress?.latitude || !order?.originAddress?.longitude) return undefined;
     return {
-      lat: parseFloat(order.originAddress.latitude),
-      lng: parseFloat(order.originAddress.longitude),
+      lat: order.originAddress.latitude,
+      lng: order.originAddress.longitude,
       label: order.originAddress.recipient || "Origine",
     };
   }, [order]);
@@ -187,8 +187,8 @@ export function OrderDetailsDialog({
   const destinationLocation = useMemo(() => {
     if (!order?.destinationAddress?.latitude || !order?.destinationAddress?.longitude) return undefined;
     return {
-      lat: parseFloat(order.destinationAddress.latitude),
-      lng: parseFloat(order.destinationAddress.longitude),
+      lat: order.destinationAddress.latitude,
+      lng: order.destinationAddress.longitude,
       label: order.destinationAddress.recipient || "Destination",
     };
   }, [order]);
@@ -199,7 +199,7 @@ export function OrderDetailsDialog({
 
   const financialSummary = useMemo(() => {
     const subtotal = order?.items.reduce((sum, item) => sum + item.price * item.quantity, 0) || 0;
-    const shippingCost = order?.totalDeliveryFee || 0;
+    const shippingCost = order?.deliveryFeeBreakdown?.baseFee || 0;
     const total = subtotal + shippingCost;
     return { subtotal, shippingCost, total };
   }, [order]);
@@ -383,7 +383,7 @@ export function OrderDetailsDialog({
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => copyToClipboard(order.user.phoneNumber, "Téléphone")}
+                  onClick={() => copyToClipboard(order.user.phoneNumber || "", "Téléphone")}
                 >
                   {copiedField === "Téléphone" ? (
                     <Check className="h-3 w-3 text-green-500" />

@@ -20,7 +20,8 @@ import {
   orderStatusHistory,
   supportTickets,
   productStocks,
-  dynamicDeliveryFees
+  dynamicDeliveryFees,
+  storeOrders
 } from "@/lib/db/schema";
 
 // Types basés sur les enums du schéma
@@ -34,94 +35,176 @@ export type Order = InferSelectModel<typeof orders>;
 export type OrderItem = InferSelectModel<typeof orderItems>;
 export type Payment = InferSelectModel<typeof payments>;
 export type Shipment = InferSelectModel<typeof shipments>;
+export type StoreOrder = InferSelectModel<typeof storeOrders>;
 
-// Structure complète d'une commande avec les nouvelles informations
+// Structure complète d'une commande (adaptée pour les vendeurs, payment global retiré ou laissé vide)
 export interface OrderWithDetails extends Order {
   user: {
     id: number;
     name: string | null;
     email: string | null;
     phoneNumber: string;
-    contactPreferences?: {
-      sms: boolean;
-      email: boolean;
-      whatsapp: boolean;
-    };
   };
-  originAddress?: {
-    id: number;
-    recipient: string;
-    region: string;
-    formattedAddress: string;
-    postalCode: string | null;
-    latitude: string | null;
-    longitude: string | null;
-    deliveryInstructions: string | null;
-    photoUrl: string | null;
-  };
-  destinationAddress?: {
-    id: number;
-    recipient: string;
-    region: string;
-    formattedAddress: string;
-    postalCode: string | null;
-    latitude: string | null;
-    longitude: string | null;
-    deliveryInstructions: string | null;
-    photoUrl: string | null;
-  };
-  items: Array<OrderItem & {
-    product: {
+  storeOrders: Array<StoreOrder & {
+    store: {
       id: number;
       name: string;
-      store: {
+    };
+    originAddress?: {
+      id: number;
+      userId: number;
+      recipient: string;
+      location: any;
+      region: string;
+      formattedAddress: string;
+      postalCode: string | null;
+      latitude: number | null;
+      longitude: number | null;
+      deliveryInstructions: string | null;
+      photoUrl: string | null;
+    };
+    destinationAddress?: {
+      id: number;
+      userId: number;
+      recipient: string;
+      location: any;
+      region: string;
+      formattedAddress: string;
+      postalCode: string | null;
+      latitude: number | null;
+      longitude: number | null;
+      deliveryInstructions: string | null;
+      photoUrl: string | null;
+    };
+    items: Array<OrderItem & {
+      product: {
         id: number;
         name: string;
+        currentStock?: number;
       };
-      currentStock?: number;
+    }>;
+    payment?: {
+      id: number;
+      amount: number;
+      status: string;
+      paymentMethod: string;
+      transactionId: string | null;
+      createdAt: Date;
+    };
+    driver?: {
+      id: number;
+      name: string;
+      phoneNumber: string;
+      vehicleType: string;
+      currentLocation?: { lat: number; lng: number };
+    };
+    deliveryFeeBreakdown?: {
+      baseFee: number;
+      distanceFee: number;
+      weightSurcharge?: number;
     };
   }>;
-  payment?: {
+  payment?: { // Conservé dans l'interface pour compatibilité, mais sera undefined pour les vendeurs
     id: number;
-    amount: number;
+    totalAmount: number;
     status: string;
     paymentMethod: string;
     transactionId: string | null;
     createdAt: Date;
-  };
-  driver?: {
-    id: number;
-    name: string;
-    phoneNumber: string;
-    vehicleType: string;
-    currentLocation?: { lat: number; lng: number };
   };
   statusHistory?: Array<{
     status: OrderStatus;
     changedAt: Date;
     changedBy?: { id: number; name: string };
   }>;
-  deliveryFeeBreakdown?: {
-    baseFee: number;
-    distanceFee: number;
-    weightSurcharge?: number;
-  };
   elapsedMinutes?: number;
   isDelayed?: boolean;
   supportTicket?: {
     id: number;
     status: string;
     lastUpdate: Date;
+  } | undefined;
+}
+export type OrderStatusType = "pending" | "in_progress" | "delivered" | "cancelled";
+
+export interface OrderDetails {
+  id: string | number; // Identifiant de la commande
+  status: OrderStatusType; // Statut de la commande
+  createdAt: Date; // Date de création
+  estimatedDeliveryDate?: Date | null; // Date de livraison estimée (optionnelle)
+  elapsedMinutes?: number; // Temps écoulé en minutes (optionnel)
+  isDelayed?: boolean; // Indicateur de retard (optionnel)
+  user: {
+    name?: string | null; // Nom de l'utilisateur (optionnel)
+    email?: string | null; // Email de l'utilisateur (optionnel)
+    phoneNumber?: string; // Numéro de téléphone (optionnel)
+  };
+  originAddress?: {
+    recipient?: string; // Nom du destinataire
+    formattedAddress?: string; // Adresse formatée
+    deliveryInstructions?: string | null; // Instructions de livraison (optionnelles)
+    latitude?: number | null; // Latitude (optionnelle)
+    longitude?: number | null; // Longitude (optionnelle)
+    region?: string; // Région (optionnelle)
+  };
+  destinationAddress?: {
+    recipient?: string; // Nom du destinataire
+    formattedAddress?: string; // Adresse formatée
+    deliveryInstructions?: string | null; // Instructions de livraison (optionnelles)
+    latitude?: number | null; // Latitude (optionnelle)
+    longitude?: number | null; // Longitude (optionnelle)
+    region?: string; // Région (optionnelle)
+  };
+  items: Array<{
+    id: string | number; // Identifiant de l'article
+    product: {
+      name: string; // Nom du produit
+      currentStock?: number; // Stock actuel (optionnel)
+    };
+    quantity: number; // Quantité
+    price: number; // Prix unitaire
+  }>;
+  driver?: {
+    name: string; // Nom du livreur
+    phoneNumber: string; // Numéro de téléphone
+    vehicleType: string; // Type de véhicule
+    currentLocation?: {
+      lat: number; // Latitude
+      lng: number; // Longitude
+    };
+  };
+  deliveryFeeBreakdown?: {
+    baseFee: number; // Frais de base
+    distanceFee: number; // Frais de distance
+    weightSurcharge?: number; // Surcharge pour le poids (optionnelle)
+  };
+  payment?: {
+    status: string; // Statut du paiement (ex. "paid", "pending")
+    paymentMethod: string; // Méthode de paiement
+    createdAt: Date; // Date de création du paiement
+    transactionId?: string | null; // ID de transaction (optionnel)
+    amount: number; // Montant payé
+  };
+  statusHistory?: Array<{
+    status: OrderStatusType; // Statut dans l'historique
+    changedAt: Date; // Date du changement
+    changedBy?: {
+      name: string; // Nom de la personne ayant effectué le changement
+    };
+  }>;
+  supportTicket?: {
+    id: string | number; // Numéro du ticket
+    status: string; // Statut du ticket (ex. "resolved", "pending")
+    lastUpdate: Date; // Date de dernière mise à jour
   };
 }
-
 export interface OrderPagination {
   page: number;
   per_page: number;
 }
 
 export interface OrderFiltersBase {
-  payment_method: any;
+  payment_method?: PaymentMethod[];
   status?: OrderStatus[];
   payment_status?: PaymentStatus[];
   date_range?: { start: Date; end: Date };
@@ -163,7 +246,7 @@ export interface OrderSearchResult {
 
 export async function searchOrders(
   userId: number,
-  userRole: "user" | "store" | "driver" | "admin" | "manager",
+  userRole: "store", // Restreint au rôle "store" pour cette version
   params: {
     filters?: OrderFiltersBase;
     pagination?: OrderPagination;
@@ -175,40 +258,47 @@ export async function searchOrders(
     per_page: Math.min(Math.max(params.pagination?.per_page || 20, 1), 100),
   };
 
-  // Conditions de base en fonction du rôle
-  const conditions: SQL[] = [];
-  if (userRole === "user") {
-    conditions.push(eq(orders.userId, userId));
-  } else if (userRole === "store") {
-    const [store] = await db.select({ id: stores.id })
-      .from(stores)
-      .where(eq(stores.userId, userId))
-      .limit(1);
-    if (!store) {
-      return emptyResult(pagination);
-    }
-    conditions.push(
-      sql`${orders.id} IN (
-        SELECT ${orderItems.orderId}
-        FROM ${orderItems}
-        JOIN ${products} ON ${orderItems.productId} = ${products.id}
-        WHERE ${products.storeId} = ${store.id}
-      )`
-    );
-  } else if (!["admin", "manager"].includes(userRole)) {
-    throw new ServiceError(ERROR_CODES.AUTHORIZATION_ERROR, "Rôle non autorisé à lister les commandes");
+  // Vérification du rôle et récupération du magasin du vendeur
+  const [store] = await db.select({ id: stores.id })
+    .from(stores)
+    .where(eq(stores.userId, userId))
+    .limit(1);
+  if (!store) {
+    throw new ServiceError(ERROR_CODES.NOT_FOUND, "Magasin non trouvé pour cet utilisateur");
   }
 
-  // Appliquer les filtres
+  // Conditions de base : limiter aux commandes liées au magasin du vendeur
+  const conditions: SQL[] = [
+    sql`${orders.id} IN (
+      SELECT ${storeOrders.orderId}
+      FROM ${storeOrders}
+      WHERE ${storeOrders.storeId} = ${store.id}
+    )`
+  ];
+
+  // Appliquer les filtres (basés sur payments, pas orderPayments)
   if (filters.status?.length) {
     conditions.push(sql`${orders.status} IN (${sql.join(filters.status, sql`, `)})`);
   }
   if (filters.payment_status?.length) {
     conditions.push(
       sql`${orders.id} IN (
-        SELECT ${payments.orderId}
-        FROM ${payments}
-        WHERE ${payments.status} IN (${sql.join(filters.payment_status, sql`, `)})
+        SELECT ${storeOrders.orderId}
+        FROM ${storeOrders}
+        JOIN ${payments} p ON p.store_order_id = ${storeOrders.id}
+        WHERE ${storeOrders.storeId} = ${store.id}
+        AND p.status IN (${sql.join(filters.payment_status, sql`, `)})
+      )`
+    );
+  }
+  if (filters.payment_method?.length) {
+    conditions.push(
+      sql`${orders.id} IN (
+        SELECT ${storeOrders.orderId}
+        FROM ${storeOrders}
+        JOIN ${payments} p ON p.store_order_id = ${storeOrders.id}
+        WHERE ${storeOrders.storeId} = ${store.id}
+        AND p.payment_method IN (${sql.join(filters.payment_method, sql`, `)})
       )`
     );
   }
@@ -220,27 +310,33 @@ export async function searchOrders(
   if (filters.payment_date_range) {
     conditions.push(
       sql`${orders.id} IN (
-        SELECT ${payments.orderId}
-        FROM ${payments}
-        WHERE ${payments.createdAt} BETWEEN ${filters.payment_date_range.start} AND ${filters.payment_date_range.end}
+        SELECT ${storeOrders.orderId}
+        FROM ${storeOrders}
+        JOIN ${payments} p ON p.store_order_id = ${storeOrders.id}
+        WHERE ${storeOrders.storeId} = ${store.id}
+        AND p.created_at BETWEEN ${filters.payment_date_range.start} AND ${filters.payment_date_range.end}
       )`
     );
   }
   if (filters.min_amount !== undefined) {
     conditions.push(
       sql`${orders.id} IN (
-        SELECT ${payments.orderId}
-        FROM ${payments}
-        WHERE ${payments.amount} >= ${filters.min_amount}
+        SELECT ${storeOrders.orderId}
+        FROM ${storeOrders}
+        JOIN ${payments} p ON p.store_order_id = ${storeOrders.id}
+        WHERE ${storeOrders.storeId} = ${store.id}
+        AND p.amount >= ${filters.min_amount}
       )`
     );
   }
   if (filters.max_amount !== undefined) {
     conditions.push(
       sql`${orders.id} IN (
-        SELECT ${payments.orderId}
-        FROM ${payments}
-        WHERE ${payments.amount} <= ${filters.max_amount}
+        SELECT ${storeOrders.orderId}
+        FROM ${storeOrders}
+        JOIN ${payments} p ON p.store_order_id = ${storeOrders.id}
+        WHERE ${storeOrders.storeId} = ${store.id}
+        AND p.amount <= ${filters.max_amount}
       )`
     );
   }
@@ -258,12 +354,11 @@ export async function searchOrders(
   const page = Math.min(pagination.page, total_pages);
   const offset = (page - 1) * pagination.per_page;
 
-  // Récupérer les commandes avec tous les détails enrichis
+  // Récupérer les commandes avec les détails pertinents pour le vendeur
   const ordersQuery = await db
     .select({
       order: {
         ...orders,
-        totalDeliveryFee: orders.totalDeliveryFee,
         estimatedDeliveryDate: orders.estimatedDeliveryDate,
       },
       user: {
@@ -272,94 +367,130 @@ export async function searchOrders(
         email: users.email,
         phoneNumber: users.phoneNumber,
       },
-      originAddress: sql`(
-        SELECT json_build_object(
-          'id', a.id,
-          'recipient', a.recipient,
-          'region', a.region,
-          'formattedAddress', a.formatted_address,
-          'postalCode', a.postal_code,
-          'latitude', a.latitude,
-          'longitude', a.longitude,
-          'deliveryInstructions', a.delivery_instructions,
-          'photoUrl', a.photo_url
-        )
-        FROM ${addresses} a
-        WHERE a.id = ${orders.originAddressId}
-      )`.as("origin_address"),
-      destinationAddress: sql`(
-        SELECT json_build_object(
-          'id', a.id,
-          'recipient', a.recipient,
-          'region', a.region,
-          'formattedAddress', a.formatted_address,
-          'postalCode', a.postal_code,
-          'latitude', a.latitude,
-          'longitude', a.longitude,
-          'deliveryInstructions', a.delivery_instructions,
-          'photoUrl', a.photo_url
-        )
-        FROM ${addresses} a
-        WHERE a.id = ${orders.destinationAddressId}
-      )`.as("destination_address"),
-      items: sql`(
+      storeOrders: sql`(
         SELECT COALESCE(json_agg(json_build_object(
-          'id', oi.id,
-          'productId', oi.product_id,
-          'quantity', oi.quantity,
-          'price', oi.price,
-          'product', json_build_object(
-            'id', p.id,
-            'name', p.name,
-            'currentStock', ps.available_stock,
-            'store', json_build_object(
-              'id', s.id,
-              'name', s.name
-            )
-          )
-        )), '[]'::json)
-        FROM ${orderItems} oi
-        JOIN ${products} p ON oi.product_id = p.id
-        JOIN ${stores} s ON p.store_id = s.id
-        LEFT JOIN ${productStocks} ps ON p.id = ps.product_id
-        WHERE oi.order_id = ${orders.id}
-      )`.as("items"),
-      payment: sql`(
-        SELECT json_build_object(
-          'id', p.id,
-          'amount', p.amount,
-          'status', p.status,
-          'paymentMethod', p.payment_method,
-          'transactionId', p.transaction_id,
-          'createdAt', p.created_at
-        )
-        FROM ${payments} p
-        WHERE p.order_id = ${orders.id}
-        LIMIT 1
-      )`.as("payment"),
-      driver: sql`(
-        SELECT json_build_object(
-          'id', d.id,
-          'name', u.name,
-          'phoneNumber', u.phone_number,
-          'vehicleType', d.vehicle_type,
-          'currentLocation', (
+          'id', so.id,
+          'orderId', so.order_id,
+          'storeId', so.store_id,
+          'subtotal', so.subtotal,
+          'deliveryFee', so.delivery_fee,
+          'total', so.total,
+          'status', so.status,
+          'shipmentId', so.shipment_id,
+          'createdAt', so.created_at,
+          'updatedAt', so.updated_at,
+          'store', json_build_object(
+            'id', s.id,
+            'name', s.name
+          ),
+          'originAddress', (
             SELECT json_build_object(
-              'lat', gl.latitude::float,
-              'lng', gl.longitude::float
+              'id', a.id,
+              'userId', a.user_id,
+              'recipient', a.recipient,
+              'location', a.location,
+              'region', a.region,
+              'formattedAddress', a.formatted_address,
+              'postalCode', a.postal_code,
+              'latitude', CASE WHEN jsonb_typeof(a.coordinates) = 'object' THEN (a.coordinates->>'lat')::float ELSE NULL END,
+              'longitude', CASE WHEN jsonb_typeof(a.coordinates) = 'object' THEN (a.coordinates->>'lng')::float ELSE NULL END,
+              'deliveryInstructions', a.delivery_instructions,
+              'photoUrl', a.photo_url
             )
-            FROM ${geolocations} gl
-            WHERE gl.driver_id = d.id
-            ORDER BY gl.created_at DESC
+            FROM ${addresses} a
+            JOIN ${shipments} sh ON a.id = sh.origin_address_id
+            WHERE sh.store_order_id = so.id
+            LIMIT 1
+          ),
+          'destinationAddress', (
+            SELECT json_build_object(
+              'id', a.id,
+              'userId', a.user_id,
+              'recipient', a.recipient,
+              'location', a.location,
+              'region', a.region,
+              'formattedAddress', a.formatted_address,
+              'postalCode', a.postal_code,
+              'latitude', CASE WHEN jsonb_typeof(a.coordinates) = 'object' THEN (a.coordinates->>'lat')::float ELSE NULL END,
+              'longitude', CASE WHEN jsonb_typeof(a.coordinates) = 'object' THEN (a.coordinates->>'lng')::float ELSE NULL END,
+              'deliveryInstructions', a.delivery_instructions,
+              'photoUrl', a.photo_url
+            )
+            FROM ${addresses} a
+            WHERE a.id = ${orders.destinationAddressId}
+            LIMIT 1
+          ),
+          'items', (
+            SELECT COALESCE(json_agg(json_build_object(
+              'id', oi.id,
+              'productId', oi.product_id,
+              'quantity', oi.quantity,
+              'price', oi.price,
+              'product', json_build_object(
+                'id', p.id,
+                'name', p.name,
+                'currentStock', ps.available_stock
+              )
+            )), '[]'::json)
+            FROM ${orderItems} oi
+            JOIN ${products} p ON oi.product_id = p.id
+            LEFT JOIN ${productStocks} ps ON p.id = ps.product_id
+            WHERE oi.store_order_id = so.id
+          ),
+          'payment', (
+            SELECT json_build_object(
+              'id', p.id,
+              'amount', p.amount,
+              'status', p.status,
+              'paymentMethod', p.payment_method,
+              'transactionId', p.transaction_id,
+              'createdAt', p.created_at
+            )
+            FROM ${payments} p
+            WHERE p.store_order_id = so.id
+            LIMIT 1
+          ),
+          'driver', (
+            SELECT json_build_object(
+              'id', d.id,
+              'name', u.name,
+              'phoneNumber', u.phone_number,
+              'vehicleType', d.vehicle_type,
+              'currentLocation', (
+                SELECT json_build_object(
+                  'lat', gl.latitude::float,
+                  'lng', gl.longitude::float
+                )
+                FROM ${geolocations} gl
+                WHERE gl.driver_id = d.id
+                ORDER BY gl.created_at DESC
+                LIMIT 1
+              )
+            )
+            FROM ${shipments} sh
+            JOIN ${drivers} d ON sh.driver_id = d.id
+            JOIN ${users} u ON d.user_id = u.id
+            WHERE sh.store_order_id = so.id
+            LIMIT 1
+          ),
+          'deliveryFeeBreakdown', (
+            SELECT json_build_object(
+              'baseFee', ddf.base_fee,
+              'distanceFee', 0, -- À ajuster si calcul dynamique disponible
+              'weightSurcharge', 0 -- À ajuster si calcul dynamique disponible
+            )
+            FROM ${dynamicDeliveryFees} ddf
+            JOIN ${shipments} sh ON sh.store_order_id = so.id
+            JOIN ${addresses} a ON a.id = sh.origin_address_id
+            WHERE ddf.region = a.region
             LIMIT 1
           )
-        )
-        FROM ${shipments} sh
-        JOIN ${drivers} d ON sh.driver_id = d.id
-        JOIN ${users} u ON d.user_id = u.id
-        WHERE sh.order_id = ${orders.id}
-        LIMIT 1
-      )`.as("driver"),
+        )), '[]'::json)
+        FROM ${storeOrders} so
+        JOIN ${stores} s ON so.store_id = s.id
+        WHERE so.order_id = ${orders.id}
+        AND so.store_id = ${store.id} -- Limiter aux sous-commandes du vendeur
+      )`.as("store_orders"),
       statusHistory: sql`(
         SELECT COALESCE(json_agg(json_build_object(
           'status', osh.status,
@@ -372,20 +503,10 @@ export async function searchOrders(
         FROM ${orderStatusHistory} osh
         LEFT JOIN ${users} u ON osh.changed_by = u.id
         WHERE osh.order_id = ${orders.id}
+        AND (osh.store_order_id IS NULL OR osh.store_order_id IN (
+          SELECT id FROM ${storeOrders} WHERE store_id = ${store.id} AND order_id = ${orders.id}
+        ))
       )`.as("status_history"),
-      deliveryFeeBreakdown: sql`(
-        SELECT json_build_object(
-          'baseFee', ddf.fee * 0.7,
-          'distanceFee', ddf.fee * 0.2,
-          'weightSurcharge', ddf.fee * 0.1
-        )
-        FROM ${dynamicDeliveryFees} ddf
-        WHERE ddf.region = (
-          SELECT a.region FROM ${addresses} a 
-          WHERE a.id = ${orders.originAddressId}
-        )
-        LIMIT 1
-      )`.as("delivery_fee_breakdown"),
       supportTicket: sql`(
         SELECT json_build_object(
           'id', st.id,
@@ -414,85 +535,65 @@ export async function searchOrders(
         `Commande ${row.order.id} n'a pas d'utilisateur associé`
       );
     }
-  
+
     const isDelayed = row.order.estimatedDeliveryDate && 
                       now > row.order.estimatedDeliveryDate && 
                       row.order.status !== 'delivered' ? true : undefined;
-  
-    // Transformation sécurisée de deliveryFeeBreakdown
-    const deliveryFeeBreakdown = (() => {
-      if (!row.deliveryFeeBreakdown || typeof row.deliveryFeeBreakdown !== 'object') {
-        return undefined;
-      }
-      const dfb = row.deliveryFeeBreakdown as Record<string, unknown>;
-      return {
-        baseFee: typeof dfb.baseFee === 'number' ? dfb.baseFee : 0,
-        distanceFee: typeof dfb.distanceFee === 'number' ? dfb.distanceFee : 0,
-        weightSurcharge: typeof dfb.weightSurcharge === 'number' ? dfb.weightSurcharge : undefined
-      };
-    })();
-  
-    // Transformation sécurisée du driver
-    const driver = (() => {
-      if (!row.driver || typeof row.driver !== 'object') {
-        return undefined;
-      }
-      const d = row.driver as Record<string, unknown>;
-      return {
-        id: typeof d.id === 'number' ? d.id : 0,
-        name: typeof d.name === 'string' ? d.name : '',
-        phoneNumber: typeof d.phoneNumber === 'string' ? d.phoneNumber : '',
-        vehicleType: typeof d.vehicleType === 'string' ? d.vehicleType : '',
-        currentLocation: (() => {
-          if (!d.currentLocation || typeof d.currentLocation !== 'object') {
-            return undefined;
-          }
-          const loc = d.currentLocation as Record<string, unknown>;
-          return {
-            lat: typeof loc.lat === 'number' ? loc.lat : 0,
-            lng: typeof loc.lng === 'number' ? loc.lng : 0
-          };
-        })()
-      };
-    })();
-  
-    // Transformation sécurisée de statusHistory
-    const statusHistory = (() => {
-      if (!Array.isArray(row.statusHistory)) {
-        return undefined;
-      }
-      return row.statusHistory.map((item: unknown) => {
-        const i = item as Record<string, unknown>;
-        return {
-          status: typeof i.status === 'string' ? i.status as OrderStatus : 'pending',
-          changedAt: i.changedAt instanceof Date ? i.changedAt : new Date(),
-          changedBy: (() => {
-            if (!i.changedBy || typeof i.changedBy !== 'object') {
-              return undefined;
-            }
-            const cb = i.changedBy as Record<string, unknown>;
-            return {
-              id: typeof cb.id === 'number' ? cb.id : 0,
-              name: typeof cb.name === 'string' ? cb.name : ''
-            };
-          })()
-        };
-      });
-    })();
-  
-    // Transformation sécurisée de supportTicket
-    const supportTicket = (() => {
-      if (!row.supportTicket || typeof row.supportTicket !== 'object') {
-        return undefined;
-      }
-      const st = row.supportTicket as Record<string, unknown>;
-      return {
-        id: typeof st.id === 'number' ? st.id : 0,
-        status: typeof st.status === 'string' ? st.status : '',
-        lastUpdate: st.lastUpdate instanceof Date ? st.lastUpdate : new Date()
-      };
-    })();
-  
+
+    const storeOrders = Array.isArray(row.storeOrders) ? row.storeOrders.map((so: any) => ({
+      ...so,
+      originAddress: so.originAddress && typeof so.originAddress === "object" ? {
+        id: so.originAddress.id,
+        userId: so.originAddress.userId,
+        recipient: so.originAddress.recipient,
+        location: so.originAddress.location,
+        region: so.originAddress.region ?? null,
+        formattedAddress: so.originAddress.formattedAddress,
+        postalCode: so.originAddress.postalCode ?? null,
+        latitude: typeof so.originAddress.latitude === 'number' ? so.originAddress.latitude : null,
+        longitude: typeof so.originAddress.longitude === 'number' ? so.originAddress.longitude : null,
+        deliveryInstructions: so.originAddress.deliveryInstructions ?? null,
+        photoUrl: so.originAddress.photoUrl ?? null,
+      } : undefined,
+      destinationAddress: so.destinationAddress && typeof so.destinationAddress === "object" ? {
+        id: so.destinationAddress.id,
+        userId: so.destinationAddress.userId,
+        recipient: so.destinationAddress.recipient,
+        location: so.destinationAddress.location,
+        region: so.destinationAddress.region ?? null,
+        formattedAddress: so.destinationAddress.formattedAddress,
+        postalCode: so.destinationAddress.postalCode ?? null,
+        latitude: typeof so.destinationAddress.latitude === 'number' ? so.destinationAddress.latitude : null,
+        longitude: typeof so.destinationAddress.longitude === 'number' ? so.destinationAddress.longitude : null,
+        deliveryInstructions: so.destinationAddress.deliveryInstructions ?? null,
+        photoUrl: so.destinationAddress.photoUrl ?? null,
+      } : undefined,
+      items: Array.isArray(so.items) ? so.items : [],
+      payment: so.payment && typeof so.payment === "object" ? {
+        id: so.payment.id,
+        amount: so.payment.amount,
+        status: so.payment.status,
+        paymentMethod: so.payment.paymentMethod,
+        transactionId: so.payment.transactionId ?? null,
+        createdAt: new Date(so.payment.createdAt)
+      } : undefined,
+      driver: so.driver && typeof so.driver === "object" ? {
+        id: so.driver.id,
+        name: so.driver.name,
+        phoneNumber: so.driver.phoneNumber,
+        vehicleType: so.driver.vehicleType,
+        currentLocation: so.driver.currentLocation && typeof so.driver.currentLocation === "object" ? {
+          lat: so.driver.currentLocation.lat,
+          lng: so.driver.currentLocation.lng
+        } : undefined
+      } : undefined,
+      deliveryFeeBreakdown: so.deliveryFeeBreakdown && typeof so.deliveryFeeBreakdown === "object" ? {
+        baseFee: so.deliveryFeeBreakdown.baseFee,
+        distanceFee: so.deliveryFeeBreakdown.distanceFee,
+        weightSurcharge: so.deliveryFeeBreakdown.weightSurcharge
+      } : undefined
+    })) : [];
+
     return {
       ...row.order,
       user: {
@@ -501,56 +602,27 @@ export async function searchOrders(
         email: row.user.email ?? null,
         phoneNumber: row.user.phoneNumber,
       },
-      originAddress: row.originAddress && typeof row.originAddress === "object"
-        ? {
-            id: (row.originAddress as any).id,
-            recipient: (row.originAddress as any).recipient,
-            region: (row.originAddress as any).region ?? null,
-            formattedAddress: (row.originAddress as any).formattedAddress,
-            postalCode: (row.originAddress as any).postalCode ?? null,
-            latitude: (row.originAddress as any).latitude ?? null,
-            longitude: (row.originAddress as any).longitude ?? null,
-            deliveryInstructions: (row.originAddress as any).deliveryInstructions ?? null,
-            photoUrl: (row.originAddress as any).photoUrl ?? null,
-          }
-        : undefined,
-      destinationAddress: row.destinationAddress && typeof row.destinationAddress === "object"
-        ? {
-            id: (row.destinationAddress as any).id,
-            recipient: (row.destinationAddress as any).recipient,
-            region: (row.destinationAddress as any).region ?? null,
-            formattedAddress: (row.destinationAddress as any).formattedAddress,
-            postalCode: (row.destinationAddress as any).postalCode ?? null,
-            latitude: (row.destinationAddress as any).latitude ?? null,
-            longitude: (row.destinationAddress as any).longitude ?? null,
-            deliveryInstructions: (row.destinationAddress as any).deliveryInstructions ?? null,
-            photoUrl: (row.destinationAddress as any).photoUrl ?? null,
-          }
-        : undefined,
-      items: Array.isArray(row.items) ? row.items : [],
-      payment: row.payment && typeof row.payment === "object"
-        ? {
-            id: (row.payment as any).id,
-            amount: (row.payment as any).amount,
-            status: (row.payment as any).status,
-            paymentMethod: (row.payment as any).paymentMethod,
-            transactionId: (row.payment as any).transactionId,
-            createdAt: new Date((row.payment as any).createdAt)
-          }
-        : undefined,
-      driver,
-      statusHistory,
-      deliveryFeeBreakdown,
+      storeOrders,
+      payment: undefined, // Pas de paiement global pour les vendeurs
+      statusHistory: Array.isArray(row.statusHistory) ? row.statusHistory.map((item: any) => ({
+        status: item.status,
+        changedAt: new Date(item.changedAt),
+        changedBy: item.changedBy ? { id: item.changedBy.id, name: item.changedBy.name } : undefined
+      })) : undefined,
       elapsedMinutes: row.order.createdAt ? Math.floor((now.getTime() - row.order.createdAt.getTime()) / (1000 * 60)) : undefined,
       isDelayed,
-      supportTicket
+      supportTicket: row.supportTicket && typeof row.supportTicket === "object" ? {
+        id: (row.supportTicket as { id: number }).id,
+        status: (row.supportTicket as { status: string }).status,
+        lastUpdate: new Date((row.supportTicket as { lastUpdate: string }).lastUpdate)
+      } : undefined
     };
   });
 
-  // Calcul des statistiques enrichies
+  // Calcul des statistiques enrichies (basées sur payments pour le magasin)
   const statsQuery = await db
     .select({
-      total_amount: sql<number>`COALESCE(SUM(${payments.amount}), 0)`,
+      total_amount: sql<number>`COALESCE(SUM(p.amount), 0)`,
       pending_count: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} = 'pending')`,
       in_progress_count: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} = 'in_progress')`,
       delivered_count: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} = 'delivered')`,
@@ -561,20 +633,21 @@ export async function searchOrders(
         ELSE NULL END
       ), 0)`,
       avg_preparation_time: sql<number>`COALESCE(AVG(
-        EXTRACT(EPOCH FROM (shipments.created_at - orders.created_at)) / 60
+        EXTRACT(EPOCH FROM (${shipments.createdAt} - ${orders.createdAt})) / 60
       ), 0)`,
       on_time_percentage: sql<number>`COALESCE(
         100.0 * COUNT(*) FILTER (
-          WHERE shipments.created_at <= orders.estimated_delivery_date
-          AND orders.status = 'delivered'
-        ) / NULLIF(COUNT(*) FILTER (WHERE orders.status = 'delivered'), 0),
+          WHERE ${shipments.createdAt} <= ${orders.estimatedDeliveryDate}
+          AND ${orders.status} = 'delivered'
+        ) / NULLIF(COUNT(*) FILTER (WHERE ${orders.status} = 'delivered'), 0),
         0
       )`
     })
     .from(orders)
-    .leftJoin(payments, eq(orders.id, payments.orderId))
-    .leftJoin(shipments, eq(orders.id, shipments.orderId))
-    .where(and(...conditions));
+    .leftJoin(storeOrders, eq(orders.id, storeOrders.orderId))
+    .leftJoin(payments, eq(storeOrders.id, payments.storeOrderId))
+    .leftJoin(shipments, eq(storeOrders.id, shipments.storeOrderId))
+    .where(and(...conditions, eq(storeOrders.storeId, store.id)));
 
   const stats = statsQuery[0];
   return {

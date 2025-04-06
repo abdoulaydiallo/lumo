@@ -43,7 +43,6 @@ export default function OrderTable({
   paymentStatusOptions,
   paymentMethodOptions,
   initialOrders,
-  initialTotal,
   initialPage,
   initialTotalPages,
   initialStats,
@@ -96,8 +95,6 @@ export default function OrderTable({
 
   const {
     orders = initialOrders,
-    total,
-    page,
     totalPages,
     stats = initialStats,
     isLoading,
@@ -105,7 +102,6 @@ export default function OrderTable({
     updateOrderStatus,
     cancelOrder,
     assignDriver,
-    isUpdatingStatus,
     isCancelling,
     isAssigningDriver,
   } = useOrders(userId, filters, pagination);

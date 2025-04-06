@@ -74,7 +74,10 @@ export async function getInitialOrders(
   };
 
   // Récupérer les données avec searchOrders
-  const result = await searchOrders(userId, userRole, { filters, pagination });
+  if (userRole === "store") {
+    const result = await searchOrders(userId, userRole, { filters, pagination });
+    return result;
+  }
+  throw new Error("Invalid userRole for searchOrders");
 
-  return result;
 }

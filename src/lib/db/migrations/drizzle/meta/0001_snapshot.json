@@ -1,6 +1,6 @@
 {
-  "id": "855cb167-8ef4-4fb9-aeee-35352a51692b",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "79c2c87b-e2de-4067-9401-94fb0d5dbfcc",
+  "prevId": "855cb167-8ef4-4fb9-aeee-35352a51692b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -778,13 +778,13 @@
         },
         "weight_surcharge_rate": {
           "name": "weight_surcharge_rate",
-          "type": "numeric(5, 3)",
+          "type": "numeric(10, 8)",
           "primaryKey": false,
           "notNull": false
         },
         "distance_surcharge_rate": {
           "name": "distance_surcharge_rate",
-          "type": "numeric(5, 3)",
+          "type": "numeric(10, 8)",
           "primaryKey": false,
           "notNull": false
         },

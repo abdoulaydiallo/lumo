@@ -26,11 +26,13 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Upload } from '@/components/Upload';
-import { MapPin, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { MapPin, ArrowLeft, ArrowRight, User, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
-import { Map } from '@/components/Map';
+import { StepIndicator } from '@/components/StepIndicator';
+import { Mapbox } from '../../../components/Mapbox';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const addressSchema = z.object({
   recipient: z.string().min(3, "Minimum 3 caractères").max(100).transform((val) => val.trim()),
@@ -70,6 +72,7 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
   const [step, setStep] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [isGeolocating, setIsGeolocating] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 9.6412, lng: -13.5784 });
   const [error, setError] = useState<string | null>(null);
 
@@ -120,10 +123,13 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
     });
   };
 
-  const handleLocationSelect = (location: { lat: number; lng: number }) => {
-    form.setValue("lat", location.lat);
-    form.setValue("lng", location.lng);
-    setMapCenter(location);
+  const handleLocationSelect = (position: mapboxgl.LngLat) => {
+    const lat = position.lat;
+    const lng = position.lng;
+    form.setValue("lat", lat);
+    form.setValue("lng", lng);
+    setMapCenter({ lat, lng });
+    toast.success(`Coordonnées sélectionnées : Lat ${lat.toFixed(4)}, Lng ${lng.toFixed(4)}`);
   };
 
   const onSubmit = (values: AddressFormValues) => {
@@ -133,8 +139,22 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
         const postalCode = generatePostalCode(region, values.locationType, values);
         const location =
           values.locationType === "URBAIN"
-            ? { type: "URBAIN" as const, commune: values.commune as ConakryCommune, district: values.district, street: values.street, landmark: values.landmark }
-            : { type: "RURAL" as const, prefecture: values.prefecture || "", subPrefecture: values.subPrefecture || "", village: values.village || "", district: values.district, landmark: values.landmark };
+            ? { 
+                type: "URBAIN" as const, 
+                commune: values.commune as ConakryCommune, 
+                district: values.district, 
+                street: values.street, 
+                landmark: values.landmark 
+              }
+            : { 
+                type: "RURAL" as const, 
+                prefecture: values.prefecture || "", 
+                subPrefecture: values.subPrefecture || "", 
+                village: values.village || "", 
+                district: values.district, 
+                landmark: values.landmark 
+              };
+        
         const addressData: AddressData = {
           recipient: values.recipient,
           userId,
@@ -158,6 +178,9 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
   };
 
   const handleNext = async () => {
+    if (isValidating) return;
+    setIsValidating(true);
+    
     const fields: (keyof AddressFormValues)[] = 
       step === 1 ? ["recipient", "locationType"] : 
       step === 2 ? (form.watch("locationType") === "URBAIN" ? ["commune", "district", "landmark"] : ["region", "prefecture", "subPrefecture", "village", "district", "landmark"]) : 
@@ -165,58 +188,157 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
       [];
     
     const isValid = await form.trigger(fields);
-    if (isValid && step < 3) {
+    if (isValid) {
       setStep(step + 1);
-    } else if (!isValid) {
+    } else {
       toast.error("Veuillez remplir tous les champs requis correctement.");
     }
+    setIsValidating(false);
   };
 
   const renderStepIndicator = () => (
-    <div className="flex justify-between mb-8 relative">
-      <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 -translate-y-1/2 -z-10">
-        <motion.div 
-          className="h-full bg-primary"
-          initial={{ width: "0%" }}
-          animate={{ width: `${(step / 3) * 100}%` }}
-          transition={{ duration: 0.3 }}
-        />
-      </div>
-      {[1, 2, 3].map((stepNumber) => (
-        <div 
-          key={stepNumber} 
-          className={`flex flex-col items-center cursor-pointer ${step >= stepNumber ? 'text-primary' : 'text-muted-foreground'}`}
-          onClick={() => stepNumber < step && setStep(stepNumber)}
-        >
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${step >= stepNumber ? 'bg-primary text-white border-primary' : 'bg-white border-gray-300'}`}>
-            {step > stepNumber ? <CheckCircle2 className="h-5 w-5" /> : stepNumber}
-          </div>
-          <span className="text-xs mt-2 font-medium">
-            {stepNumber === 1 ? 'Destinataire' : 
-             stepNumber === 2 ? 'Adresse' : 
-             'Localisation'}
-          </span>
-        </div>
-      ))}
+    <div className="flex justify-between mb-8">
+      <StepIndicator
+        label="Destinataire"
+        active={step === 1}
+        completed={step > 1}
+        icon={<User className="h-4 w-4" />}
+        onClick={() => step > 1 && setStep(1)}
+        ariaLabel="Étape 1: Informations du destinataire"
+      />
+      <StepIndicator
+        label="Adresse"
+        active={step === 2}
+        completed={step > 2}
+        icon={<MapPin className="h-4 w-4" />}
+        onClick={() => step > 2 && setStep(2)}
+        ariaLabel="Étape 2: Détails de l'adresse"
+      />
+      <StepIndicator
+        label="Localisation"
+        active={step === 3}
+        completed={step > 3}
+        icon={<MapPin className="h-4 w-4" />}
+        onClick={() => step > 3 && setStep(3)}
+        ariaLabel="Étape 3: Position géographique"
+      />
+      <StepIndicator
+        label="Résumé"
+        active={step === 4}
+        completed={false}
+        icon={<CheckCircle className="h-4 w-4" />}
+        ariaLabel="Étape 4: Résumé de l'adresse"
+      />
     </div>
   );
 
+  const renderAddressSummary = () => {
+    const values = form.getValues();
+    const isUrban = values.locationType === "URBAIN";
+    
+    return (
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Résumé de l'adresse</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 className="font-medium text-sm text-muted-foreground">Destinataire</h4>
+              <p>{values.recipient}</p>
+            </div>
+            
+            <div>
+              <h4 className="font-medium text-sm text-muted-foreground">Type d'adresse</h4>
+              <p>{isUrban ? "Urbaine (Conakry)" : "Rurale"}</p>
+            </div>
+            
+            {isUrban ? (
+              <>
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground">Commune</h4>
+                  <p>{values.commune}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground">Quartier</h4>
+                  <p>{values.district}</p>
+                </div>
+                {values.street && (
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground">Rue</h4>
+                    <p>{values.street}</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground">Région</h4>
+                  <p>{values.region}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground">Préfecture</h4>
+                  <p>{values.prefecture}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground">Sous-préfecture</h4>
+                  <p>{values.subPrefecture}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground">Village</h4>
+                  <p>{values.village}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground">Quartier</h4>
+                  <p>{values.district}</p>
+                </div>
+              </>
+            )}
+            
+            <div>
+              <h4 className="font-medium text-sm text-muted-foreground">Repère</h4>
+              <p>{values.landmark}</p>
+            </div>
+            
+            <div>
+              <h4 className="font-medium text-sm text-muted-foreground">Coordonnées</h4>
+              <p>Lat: {values.lat?.toFixed(6)}, Lng: {values.lng?.toFixed(6)}</p>
+            </div>
+            
+            {values.deliveryInstructions && (
+              <div>
+                <h4 className="font-medium text-sm text-muted-foreground">Instructions de livraison</h4>
+                <p>{values.deliveryInstructions}</p>
+              </div>
+            )}
+            
+            {values.photoUrl && (
+              <div className="md:col-span-2">
+                <h4 className="font-medium text-sm text-muted-foreground">Photo</h4>
+                <img 
+                  src={values.photoUrl} 
+                  alt="Photo de l'adresse" 
+                  className="mt-2 rounded-md w-full max-w-xs border"
+                />
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={(e) => {
-        e.preventDefault();
-        if (step === 3) {
-          form.handleSubmit(onSubmit)();
-        }
-      }} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {renderStepIndicator()}
 
         <motion.div
           key={step}
-          initial={{ opacity: 0, x: step > 1 ? 50 : -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: step > 1 ? -50 : 50 }}
-          transition={{ duration: 0.3 }}
+          initial={{ opacity: 0, y: step > 1 ? 50 : -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: step > 1 ? -50 : 50 }}
+          transition={{ duration: 0.1 }}
         >
           {step === 1 && (
             <div className="space-y-4">
@@ -476,26 +598,26 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
           )}
 
           {step === 3 && (
-            <div className="space-y-6">
+            <div className="space-y-2 overflow-y-scroll">
               <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="photoUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Photo de l'adresse (optionnel)</FormLabel>
-                        <FormControl>
-                          <Upload
-                            value={field.value ? [field.value] : []}
-                            onChange={(urls) => field.onChange(urls[0] || "")}
-                            maxFiles={1}
-                            maxSize={5}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name="photoUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Photo de la devanture de l&apos;adresse (optionnel)</FormLabel>
+                      <FormControl>
+                        <Upload
+                          value={field.value ? [field.value] : []}
+                          onChange={(urls) => field.onChange(urls[0] || "")}
+                          maxFiles={1}
+                          maxSize={5}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <h3 className="text-lg font-semibold">Position sur la carte</h3>
                 <div className="hidden">
                   <FormField
@@ -510,7 +632,7 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
                             step="any"
                             placeholder="Ex. 9.5092"
                             {...field}
-                            value={field.value ?? 0}
+                            value={field.value ?? 9.5092}
                             onChange={(e) => {
                               const value = e.target.value ? parseFloat(e.target.value) : undefined;
                               field.onChange(value);
@@ -538,7 +660,7 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
                             step="any"
                             placeholder="Ex. -13.7122"
                             {...field}
-                            value={field.value ?? 0}
+                            value={field.value ?? -13.7122}
                             onChange={(e) => {
                               const value = e.target.value ? parseFloat(e.target.value) : undefined;
                               field.onChange(value);
@@ -575,14 +697,29 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
                   )}
                 </Button>
                 <div className="h-[250px] mt-4 rounded-lg overflow-hidden border relative">
-                  <Map
+                  <Mapbox
                     center={mapCenter}
-                    zoom={14}
-                    onLocationSelect={handleLocationSelect}
-                    className="absolute inset-0"
+                    zoom={11}
+                    onGeolocate={handleLocationSelect}
+                    onClick={handleLocationSelect}
+                    geolocateControl
                   />
                 </div>
-                <div>Vous pouvez cliquer sur la carte pour ajouter les coordonées</div>
+                <div>Vous pouvez cliquer sur la carte pour ajouter les coordonnées</div>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-6">
+              {renderAddressSummary()}
+              
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-800 mb-2">Vérifiez attentivement les informations</h4>
+                <p className="text-blue-700 text-sm">
+                  Assurez-vous que toutes les informations sont correctes avant de soumettre. 
+                  Une fois créée, l'adresse ne pourra être modifiée que par le support client.
+                </p>
               </div>
             </div>
           )}
@@ -596,29 +733,55 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
               type="button"
               variant="outline"
               onClick={() => setStep(step - 1)}
-              disabled={isPending}
+              disabled={isPending || isValidating}
               className="flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" /> Précédent
             </Button>
           )}
-          {step < 3 ? (
+          {step < 4 ? (
             <Button
               type="button"
               onClick={handleNext}
-              disabled={isPending}
+              disabled={isPending || isValidating}
               className="ml-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
             >
-              Suivant <ArrowRight className="h-4 w-4" />
+              {isValidating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Validation...
+                </>
+              ) : (
+                <>
+                  Suivant <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </Button>
           ) : (
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="ml-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-            >
-              {isPending ? "Création..." : "Créer l'adresse"}
-            </Button>
+            <div className="flex gap-2 ml-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStep(3)}
+                disabled={isPending}
+              >
+                Modifier
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="flex items-center gap-4"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  "Confirmer et créer l'adresse"
+                )}
+              </Button>
+            </div>
           )}
         </div>
       </form>

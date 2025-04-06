@@ -100,7 +100,7 @@ export function UserActions({ className }: UserActionsProps) {
         )}
       </Button>
       {session?.user ? (
-        <>
+        <div className="flex items-center gap-6">
           <Link
             href="/marketplace/wishlists"
             className="p-1.5 hover:bg-muted/20 rounded-full relative"
@@ -139,7 +139,7 @@ export function UserActions({ className }: UserActionsProps) {
           <Link href="/user/profile">
             <UserAvatar className="h-7 w-7" />
           </Link>
-        </>
+        </div>
       ) : (
         <Button
           asChild

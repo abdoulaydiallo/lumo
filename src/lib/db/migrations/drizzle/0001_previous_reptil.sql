@@ -1,0 +1,2 @@
+ALTER TABLE "dynamic_delivery_fees" ALTER COLUMN "weight_surcharge_rate" SET DATA TYPE numeric(10, 8);--> statement-breakpoint
+ALTER TABLE "dynamic_delivery_fees" ALTER COLUMN "distance_surcharge_rate" SET DATA TYPE numeric(10, 8);

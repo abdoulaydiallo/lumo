@@ -19,8 +19,6 @@ export interface OverviewMetrics {
 export interface Order {
   id: number;
   userId: number | null;
-  originAddressId: number | null;
-  destinationAddressId: number | null;
   status: "pending" | "in_progress" | "delivered" | "cancelled";
   createdAt: Date | null;
   updatedAt: Date | null;
@@ -88,7 +86,6 @@ export async function getOverviewDataByUserId(lowStockThreshold: number = 5): Pr
       .select({
         id: orders.id,
         userId: orders.userId,
-        originAddressId: orders.originAddressId,
         destinationAddressId: orders.destinationAddressId,
         status: orders.status,
         createdAt: orders.createdAt,

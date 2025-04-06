@@ -112,7 +112,14 @@ CREATE TABLE "dynamic_delivery_fees" (
 	"weight_max" integer NOT NULL,
 	"distance_min" integer NOT NULL,
 	"distance_max" integer NOT NULL,
-	"fee" integer NOT NULL,
+	"base_fee" integer NOT NULL,
+	"weight_surcharge_rate" numeric(5, 3),
+	"distance_surcharge_rate" numeric(5, 3),
+	"min_fee" integer,
+	"max_fee" integer,
+	"delivery_type" varchar(20) DEFAULT 'STANDARD',
+	"vehicle_type" varchar(20),
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
@@ -149,15 +156,30 @@ CREATE TABLE "offline_queue" (
 --> statement-breakpoint
 CREATE TABLE "order_items" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"order_id" integer,
-	"product_id" integer,
+	"order_id" integer NOT NULL,
+	"store_order_id" integer NOT NULL,
+	"product_id" integer NOT NULL,
 	"quantity" integer NOT NULL,
+	"variant_id" integer,
 	"price" integer NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "order_payments" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"order_id" integer NOT NULL,
+	"total_amount" integer NOT NULL,
+	"payment_method" "payment_methods" NOT NULL,
+	"status" "payment_statuses" DEFAULT 'pending' NOT NULL,
+	"transaction_id" varchar(100),
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now(),
+	CONSTRAINT "order_payments_transaction_id_unique" UNIQUE("transaction_id")
 );
 --> statement-breakpoint
 CREATE TABLE "order_status_history" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"order_id" integer,
+	"order_id" integer NOT NULL,
+	"store_order_id" integer,
 	"status" "order_statuses" NOT NULL,
 	"changed_at" timestamp DEFAULT now(),
 	"changed_by" integer
@@ -165,10 +187,8 @@ CREATE TABLE "order_status_history" (
 --> statement-breakpoint
 CREATE TABLE "orders" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"user_id" integer,
-	"origin_address_id" integer,
-	"destination_address_id" integer,
-	"total_delivery_fee" integer,
+	"user_id" integer NOT NULL,
+	"destination_address_id" integer NOT NULL,
 	"status" "order_statuses" DEFAULT 'pending' NOT NULL,
 	"estimated_delivery_date" timestamp,
 	"created_at" timestamp DEFAULT now(),
@@ -195,7 +215,8 @@ CREATE TABLE "password_resets" (
 --> statement-breakpoint
 CREATE TABLE "payments" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"order_id" integer,
+	"order_id" integer NOT NULL,
+	"store_order_id" integer NOT NULL,
 	"amount" integer NOT NULL,
 	"payment_method" "payment_methods" NOT NULL,
 	"status" "payment_statuses" DEFAULT 'pending' NOT NULL,
@@ -209,7 +230,7 @@ CREATE TABLE "payments" (
 --> statement-breakpoint
 CREATE TABLE "platform_fees" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"order_id" integer,
+	"store_order_id" integer NOT NULL,
 	"store_fee" integer NOT NULL,
 	"delivery_fee" integer NOT NULL,
 	"created_at" timestamp DEFAULT now()
@@ -356,7 +377,8 @@ CREATE TABLE "sessions" (
 --> statement-breakpoint
 CREATE TABLE "shipments" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"order_id" integer,
+	"store_order_id" integer NOT NULL,
+	"origin_address_id" integer NOT NULL,
 	"multi_order_ids" jsonb,
 	"driver_id" integer,
 	"return_id" integer,
@@ -390,7 +412,8 @@ CREATE TABLE "store_analytics" (
 --> statement-breakpoint
 CREATE TABLE "store_commissions" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"store_id" integer,
+	"store_id" integer NOT NULL,
+	"store_order_id" integer NOT NULL,
 	"commission_rate" integer NOT NULL,
 	"commission_amount" integer NOT NULL,
 	"created_at" timestamp DEFAULT now(),
@@ -421,6 +444,19 @@ CREATE TABLE "store_messages" (
 	"message" text NOT NULL,
 	"is_read" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "store_orders" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"order_id" integer NOT NULL,
+	"store_id" integer NOT NULL,
+	"subtotal" integer NOT NULL,
+	"delivery_fee" integer NOT NULL,
+	"total" integer NOT NULL,
+	"status" "order_statuses" DEFAULT 'pending' NOT NULL,
+	"shipment_id" integer,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "stores" (
@@ -465,7 +501,7 @@ CREATE TABLE "ticket_messages" (
 --> statement-breakpoint
 CREATE TABLE "tracking" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"shipment_id" integer,
+	"shipment_id" integer NOT NULL,
 	"latitude" numeric(9, 6) NOT NULL,
 	"longitude" numeric(9, 6) NOT NULL,
 	"timestamp" timestamp DEFAULT now()
@@ -527,15 +563,19 @@ ALTER TABLE "geolocations" ADD CONSTRAINT "geolocations_driver_id_drivers_id_fk"
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "offline_queue" ADD CONSTRAINT "offline_queue_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "order_items" ADD CONSTRAINT "order_items_store_order_id_store_orders_id_fk" FOREIGN KEY ("store_order_id") REFERENCES "public"."store_orders"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "order_items" ADD CONSTRAINT "order_items_variant_id_product_variants_id_fk" FOREIGN KEY ("variant_id") REFERENCES "public"."product_variants"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "order_payments" ADD CONSTRAINT "order_payments_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "order_status_history" ADD CONSTRAINT "order_status_history_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "order_status_history" ADD CONSTRAINT "order_status_history_store_order_id_store_orders_id_fk" FOREIGN KEY ("store_order_id") REFERENCES "public"."store_orders"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "order_status_history" ADD CONSTRAINT "order_status_history_changed_by_users_id_fk" FOREIGN KEY ("changed_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
-ALTER TABLE "orders" ADD CONSTRAINT "orders_origin_address_id_addresses_id_fk" FOREIGN KEY ("origin_address_id") REFERENCES "public"."addresses"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_destination_address_id_addresses_id_fk" FOREIGN KEY ("destination_address_id") REFERENCES "public"."addresses"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "password_resets" ADD CONSTRAINT "password_resets_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payments" ADD CONSTRAINT "payments_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
-ALTER TABLE "platform_fees" ADD CONSTRAINT "platform_fees_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "payments" ADD CONSTRAINT "payments_store_order_id_store_orders_id_fk" FOREIGN KEY ("store_order_id") REFERENCES "public"."store_orders"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "platform_fees" ADD CONSTRAINT "platform_fees_store_order_id_store_orders_id_fk" FOREIGN KEY ("store_order_id") REFERENCES "public"."store_orders"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "product_category_relation" ADD CONSTRAINT "product_category_relation_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "product_category_relation" ADD CONSTRAINT "product_category_relation_category_id_product_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."product_categories"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "product_images" ADD CONSTRAINT "product_images_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
@@ -553,17 +593,22 @@ ALTER TABLE "reviews" ADD CONSTRAINT "reviews_user_id_users_id_fk" FOREIGN KEY (
 ALTER TABLE "reviews" ADD CONSTRAINT "reviews_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "schedules" ADD CONSTRAINT "schedules_driver_id_drivers_id_fk" FOREIGN KEY ("driver_id") REFERENCES "public"."drivers"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "shipments" ADD CONSTRAINT "shipments_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "shipments" ADD CONSTRAINT "shipments_store_order_id_store_orders_id_fk" FOREIGN KEY ("store_order_id") REFERENCES "public"."store_orders"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "shipments" ADD CONSTRAINT "shipments_origin_address_id_addresses_id_fk" FOREIGN KEY ("origin_address_id") REFERENCES "public"."addresses"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "shipments" ADD CONSTRAINT "shipments_driver_id_drivers_id_fk" FOREIGN KEY ("driver_id") REFERENCES "public"."drivers"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "shipments" ADD CONSTRAINT "shipments_return_id_returns_id_fk" FOREIGN KEY ("return_id") REFERENCES "public"."returns"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "store_activities" ADD CONSTRAINT "store_activities_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "store_analytics" ADD CONSTRAINT "store_analytics_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "store_commissions" ADD CONSTRAINT "store_commissions_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "store_commissions" ADD CONSTRAINT "store_commissions_store_order_id_store_orders_id_fk" FOREIGN KEY ("store_order_id") REFERENCES "public"."store_orders"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "store_documents" ADD CONSTRAINT "store_documents_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "store_drivers" ADD CONSTRAINT "store_drivers_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "store_drivers" ADD CONSTRAINT "store_drivers_driver_id_drivers_id_fk" FOREIGN KEY ("driver_id") REFERENCES "public"."drivers"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "store_messages" ADD CONSTRAINT "store_messages_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "store_messages" ADD CONSTRAINT "store_messages_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "store_orders" ADD CONSTRAINT "store_orders_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "store_orders" ADD CONSTRAINT "store_orders_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "store_orders" ADD CONSTRAINT "store_orders_shipment_id_shipments_id_fk" FOREIGN KEY ("shipment_id") REFERENCES "public"."shipments"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "stores" ADD CONSTRAINT "stores_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "stores" ADD CONSTRAINT "stores_address_id_addresses_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."addresses"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "support_tickets" ADD CONSTRAINT "support_tickets_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
@@ -575,8 +620,20 @@ ALTER TABLE "verification_tokens" ADD CONSTRAINT "verification_tokens_user_id_us
 ALTER TABLE "wishlists" ADD CONSTRAINT "wishlists_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "wishlists" ADD CONSTRAINT "wishlists_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 CREATE INDEX "addresses_region_idx" ON "addresses" USING btree ("region");--> statement-breakpoint
-CREATE INDEX "order_items_product_id_idx" ON "order_items" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "delivery_fees_region_idx" ON "dynamic_delivery_fees" USING btree ("region");--> statement-breakpoint
+CREATE INDEX "delivery_fees_weight_idx" ON "dynamic_delivery_fees" USING btree ("weight_max");--> statement-breakpoint
+CREATE INDEX "delivery_fees_distance_idx" ON "dynamic_delivery_fees" USING btree ("distance_max");--> statement-breakpoint
+CREATE INDEX "delivery_fees_type_idx" ON "dynamic_delivery_fees" USING btree ("delivery_type");--> statement-breakpoint
 CREATE INDEX "order_items_order_id_idx" ON "order_items" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX "order_items_store_order_id_idx" ON "order_items" USING btree ("store_order_id");--> statement-breakpoint
+CREATE INDEX "order_items_product_id_idx" ON "order_items" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "order_payments_order_id_idx" ON "order_payments" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX "order_status_history_order_id_idx" ON "order_status_history" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX "order_status_history_store_order_id_idx" ON "order_status_history" USING btree ("store_order_id");--> statement-breakpoint
+CREATE INDEX "orders_user_id_idx" ON "orders" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "payments_order_id_idx" ON "payments" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX "payments_store_order_id_idx" ON "payments" USING btree ("store_order_id");--> statement-breakpoint
+CREATE INDEX "platform_fees_store_order_id_idx" ON "platform_fees" USING btree ("store_order_id");--> statement-breakpoint
 CREATE INDEX "product_category_relation_product_id_idx" ON "product_category_relation" USING btree ("product_id");--> statement-breakpoint
 CREATE INDEX "product_category_relation_category_id_idx" ON "product_category_relation" USING btree ("category_id");--> statement-breakpoint
 CREATE INDEX "product_images_product_id_idx" ON "product_images" USING btree ("product_id");--> statement-breakpoint
@@ -594,4 +651,12 @@ CREATE INDEX "products_created_at_idx" ON "products" USING btree ("created_at");
 CREATE INDEX "products_search_idx" ON "products" USING gin (to_tsvector('french', "name" || ' ' || COALESCE("description", '')));--> statement-breakpoint
 CREATE INDEX "promotions_discount_idx" ON "promotions" USING btree ("discount_percentage");--> statement-breakpoint
 CREATE INDEX "reviews_product_id_rating_idx" ON "reviews" USING btree ("product_id","rating");--> statement-breakpoint
-CREATE INDEX "stores_user_id_idx" ON "stores" USING btree ("user_id");
+CREATE INDEX "shipments_store_order_id_idx" ON "shipments" USING btree ("store_order_id");--> statement-breakpoint
+CREATE INDEX "shipments_driver_id_idx" ON "shipments" USING btree ("driver_id");--> statement-breakpoint
+CREATE INDEX "store_commissions_store_id_idx" ON "store_commissions" USING btree ("store_id");--> statement-breakpoint
+CREATE INDEX "store_commissions_store_order_id_idx" ON "store_commissions" USING btree ("store_order_id");--> statement-breakpoint
+CREATE INDEX "store_orders_order_id_idx" ON "store_orders" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX "store_orders_store_id_idx" ON "store_orders" USING btree ("store_id");--> statement-breakpoint
+CREATE INDEX "store_orders_status_idx" ON "store_orders" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "stores_user_id_idx" ON "stores" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "tracking_shipment_id_idx" ON "tracking" USING btree ("shipment_id");

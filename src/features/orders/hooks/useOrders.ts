@@ -3,13 +3,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { OrderFiltersBase, OrderPagination, OrderSearchResult } from "@/lib/db/orders.search";
 import { toast } from "sonner";
+import { DeliveryEstimate, OrderInsert, OrderItemInsert } from "@/services/orders.service";
 
-export function useOrders(userId: number, initialFilters?: OrderFiltersBase, initialPagination?: OrderPagination) {
+export function useOrders(
+  userId: number,
+  initialFilters?: OrderFiltersBase,
+  initialPagination?: OrderPagination
+) {
   const queryClient = useQueryClient();
 
   // Valeurs par défaut pour les filtres et la pagination
   const defaultFilters: OrderFiltersBase = {
-    payment_method: null, // Valeur par défaut pour éviter erreur de type
+    payment_method: undefined,
     ...initialFilters,
   };
   const defaultPagination: OrderPagination = {
@@ -51,6 +56,40 @@ export function useOrders(userId: number, initialFilters?: OrderFiltersBase, ini
     enabled: !!userId,
   });
 
+  // Mutation pour créer une nouvelle commande
+  const createOrderMutation = useMutation({
+    mutationFn: async ({
+      orderData,
+      items,
+      deliveryEstimates,
+    }: {
+      orderData: OrderInsert;
+      items: OrderItemInsert[];
+      deliveryEstimates: DeliveryEstimate[];
+    }) => {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderData, items, userId, deliveryEstimates }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || "Erreur lors de la création de la commande");
+      }
+      const data = await response.json();
+      return data.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["orders", userId] });
+      toast.success("Commande créée avec succès");
+      return data;
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erreur lors de la création de la commande");
+      throw error;
+    },
+  });
+
   // Mutation pour mettre à jour le statut de la commande
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
@@ -59,10 +98,13 @@ export function useOrders(userId: number, initialFilters?: OrderFiltersBase, ini
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status, sellerUserId: userId }),
       });
-      if (!response.ok) throw new Error("Erreur lors de la mise à jour du statut");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || "Erreur lors de la mise à jour du statut");
+      }
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders", userId] });
       toast.success("Statut de la commande mis à jour avec succès");
     },
@@ -77,10 +119,13 @@ export function useOrders(userId: number, initialFilters?: OrderFiltersBase, ini
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ callerUserId: userId }),
       });
-      if (!response.ok) throw new Error("Erreur lors de l'annulation de la commande");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || "Erreur lors de l'annulation de la commande");
+      }
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders", userId] });
       toast.success("Commande annulée avec succès");
     },
@@ -90,34 +135,58 @@ export function useOrders(userId: number, initialFilters?: OrderFiltersBase, ini
   // Mutation pour créer une expédition et assigner un chauffeur
   const assignDriverMutation = useMutation({
     mutationFn: async ({ orderId, driverId }: { orderId: number; driverId: number }) => {
-      // Étape 1 : Créer l'expédition
       const shipmentResponse = await fetch("/api/orders/create-shipment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId, sellerUserId: userId, driverId }),
       });
-      if (!shipmentResponse.ok) throw new Error("Erreur lors de la création de l'expédition");
+      if (!shipmentResponse.ok) {
+        const errorData = await shipmentResponse.json();
+        throw new Error(errorData.error?.message || "Erreur lors de la création de l'expédition");
+      }
       const shipmentData = await shipmentResponse.json();
 
-      // Étape 2 : Assigner le chauffeur
-      const shipmentId = shipmentData.data.id; // Supposons que l'ID est retourné
+      const shipmentId = shipmentData.data.id;
       const assignResponse = await fetch("/api/orders/assign-driver", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ shipmentId, driverId, sellerUserId: userId }),
       });
-      if (!assignResponse.ok) throw new Error("Erreur lors de l'assignation du chauffeur");
+      if (!assignResponse.ok) {
+        const errorData = await assignResponse.json();
+        throw new Error(errorData.error?.message || "Erreur lors de l'assignation du chauffeur");
+      }
       return assignResponse.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders", userId] });
       toast.success("Chauffeur assigné avec succès");
     },
     onError: (error) => toast.error(error.message || "Erreur lors de l'assignation du chauffeur"),
   });
 
+  // Requête pour récupérer les promotions des produits
+  const getProductPromotionsQuery = (productIds: number[]) =>
+    useQuery({
+      queryKey: ["productPromotions", productIds],
+      queryFn: async (): Promise<ProductPromotion[]> => {
+        const response = await fetch("/api/promotions/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productIds }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || "Erreur lors de la récupération des promotions");
+        }
+        const data = await response.json();
+        return data.data as ProductPromotion[];
+      },
+      enabled: !!userId && productIds.length > 0,
+    });
+
   // Fonction pour rafraîchir avec de nouveaux filtres/pagination
-  const refetchWithParams = (newFilters?: OrderFiltersBase, newPagination?: OrderPagination, p0?: { column: string; direction: string; }) => {
+  const refetchWithParams = (newFilters?: OrderFiltersBase, newPagination?: OrderPagination) => {
     const updatedFilters = { ...defaultFilters, ...newFilters };
     const updatedPagination = { ...defaultPagination, ...newPagination };
     queryClient.invalidateQueries({
@@ -134,11 +203,24 @@ export function useOrders(userId: number, initialFilters?: OrderFiltersBase, ini
     stats: ordersQuery.data?.stats,
     isLoading: ordersQuery.isLoading,
     refetchWithParams,
+    createOrder: createOrderMutation.mutateAsync,
     updateOrderStatus: updateStatusMutation.mutate,
     cancelOrder: cancelOrderMutation.mutate,
     assignDriver: assignDriverMutation.mutate,
+    getProductPromotions: getProductPromotionsQuery,
+    isCreating: createOrderMutation.isPending,
     isUpdatingStatus: updateStatusMutation.isPending,
     isCancelling: cancelOrderMutation.isPending,
     isAssigningDriver: assignDriverMutation.isPending,
   };
+}
+
+// Interface pour les promotions
+export interface ProductPromotion {
+  productId: number;
+  discountPercentage: number;
+  promotionId: number;
+  startDate: Date;
+  endDate: Date;
+  isExpired: boolean;
 }

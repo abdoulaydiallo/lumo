@@ -8,31 +8,23 @@ import { Trash2, Eye, Plus, Minus } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CartItem } from "../api/queries";
+import { useRouter } from "next/navigation";
 
 export function CartList() {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const userId = Number(session?.user?.id) || 0;
   const { cart, isLoading, removeFromCart, updateQuantity, clearCart, isUpdating, isClearing } = useCart(userId);
-  const queryClient = useQueryClient();
 
   // Mutation pour le checkout (à implémenter côté serveur)
   const checkoutMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/checkout", {
-        method: "POST",
-        body: JSON.stringify({ userId, cartItems: cart?.items }),
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) throw new Error("Échec de la commande");
-      return response.json();
+      router.push("/marketplace/checkout")
     },
-    onSuccess: (data) => {
-      window.location.href = data.redirectUrl; // Redirection vers paiement ou confirmation
-      clearCart(); // Vide le panier après succès (optionnel)
-    },
+    
     onError: (err) => {
       toast.error(err.message || "Erreur lors de la commande");
     },

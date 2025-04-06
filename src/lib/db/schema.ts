@@ -167,16 +167,37 @@ export const orders = pgTable(
   "orders",
   {
     id: serial("id").primaryKey(),
-    userId: integer("user_id").references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    originAddressId: integer("origin_address_id").references(() => addresses.id, { onDelete: "set null", onUpdate: "cascade" }),
-    destinationAddressId: integer("destination_address_id").references(() => addresses.id, { onDelete: "set null", onUpdate: "cascade" }),
-    totalDeliveryFee: integer("total_delivery_fee"),
-    status: orderStatuses("status").notNull().default("pending"),
-    estimatedDeliveryDate: timestamp("estimated_delivery_date"),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    destinationAddressId: integer("destination_address_id").references(() => addresses.id, { onDelete: "set null", onUpdate: "cascade" }).notNull(),
+    status: orderStatuses("status").notNull().default("pending"), // Statut global
+    estimatedDeliveryDate: timestamp("estimated_delivery_date"), // Optionnel, basé sur la livraison la plus longue
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
+  (table) => [
+    index("orders_user_id_idx").on(table.userId),
+  ]
+);
 
+export const storeOrders = pgTable(
+  "store_orders",
+  {
+    id: serial("id").primaryKey(),
+    orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    storeId: integer("store_id").references(() => stores.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    subtotal: integer("subtotal").notNull(), // Montant avant frais de livraison pour ce vendeur
+    deliveryFee: integer("delivery_fee").notNull(), // Frais de livraison spécifiques
+    total: integer("total").notNull(), // subtotal + deliveryFee
+    status: orderStatuses("status").notNull().default("pending"), // Statut spécifique à cette sous-commande
+    shipmentId: integer("shipment_id").references(() => shipments.id, { onDelete: "set null", onUpdate: "cascade" }), // Lien vers l’expédition
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("store_orders_order_id_idx").on(table.orderId),
+    index("store_orders_store_id_idx").on(table.storeId),
+    index("store_orders_status_idx").on(table.status),
+  ]
 );
 
 // Table: orderItems
@@ -184,14 +205,34 @@ export const orderItems = pgTable(
   "order_items",
   {
     id: serial("id").primaryKey(),
-    orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    productId: integer("product_id").references(() => products.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    storeOrderId: integer("store_order_id").references(() => storeOrders.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    productId: integer("product_id").references(() => products.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
     quantity: integer("quantity").notNull(),
-    price: integer("price").notNull(),
+    variantId: integer("variant_id").references(() => productVariants.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    price: integer("price").notNull(), // Prix unitaire, inclut réduction si applicable
   },
   (table) => [
+    index("order_items_order_id_idx").on(table.orderId),
+    index("order_items_store_order_id_idx").on(table.storeOrderId),
     index("order_items_product_id_idx").on(table.productId),
-    index("order_items_order_id_idx").on(table.orderId)
+  ]
+);
+
+export const orderPayments = pgTable(
+  "order_payments",
+  {
+    id: serial("id").primaryKey(),
+    orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    totalAmount: integer("total_amount").notNull(), // Montant global payé par le client
+    paymentMethod: paymentMethods("payment_method").notNull(),
+    status: paymentStatuses("status").notNull().default("pending"),
+    transactionId: varchar("transaction_id", { length: 100 }).unique(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("order_payments_order_id_idx").on(table.orderId),
   ]
 );
 
@@ -231,8 +272,9 @@ export const shipments = pgTable(
   "shipments",
   {
     id: serial("id").primaryKey(),
-    orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    multiOrderIds: jsonb("multi_order_ids"),
+    storeOrderId: integer("store_order_id").references(() => storeOrders.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    originAddressId: integer("origin_address_id").references(() => addresses.id, { onDelete: "set null", onUpdate: "cascade" }).notNull(), // Adresse du vendeur
+    multiOrderIds: jsonb("multi_order_ids"), // Pour regroupements futurs
     driverId: integer("driver_id").references(() => drivers.id, { onDelete: "set null", onUpdate: "cascade" }),
     returnId: integer("return_id").references(() => returns.id, { onDelete: "set null", onUpdate: "cascade" }),
     isManagedByStore: boolean("is_managed_by_store").default(false),
@@ -243,16 +285,26 @@ export const shipments = pgTable(
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
+  (table) => [
+    index("shipments_store_order_id_idx").on(table.storeOrderId),
+    index("shipments_driver_id_idx").on(table.driverId),
+  ]
 );
 
 // Table: tracking
-export const tracking = pgTable("tracking", {
-  id: serial("id").primaryKey(),
-  shipmentId: integer("shipment_id").references(() => shipments.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  latitude: numeric("latitude", { precision: 9, scale: 6 }).notNull(),
-  longitude: numeric("longitude", { precision: 9, scale: 6 }).notNull(),
-  timestamp: timestamp("timestamp").defaultNow(),
-});
+export const tracking = pgTable(
+  "tracking",
+  {
+    id: serial("id").primaryKey(),
+    shipmentId: integer("shipment_id").references(() => shipments.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    latitude: numeric("latitude", { precision: 9, scale: 6 }).notNull(),
+    longitude: numeric("longitude", { precision: 9, scale: 6 }).notNull(),
+    timestamp: timestamp("timestamp").defaultNow(),
+  },
+  (table) => [
+    index("tracking_shipment_id_idx").on(table.shipmentId),
+  ]
+);
 
 // Table: geolocations
 export const geolocations = pgTable(
@@ -292,8 +344,9 @@ export const payments = pgTable(
   "payments",
   {
     id: serial("id").primaryKey(),
-    orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    amount: integer("amount").notNull(),
+    orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    storeOrderId: integer("store_order_id").references(() => storeOrders.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    amount: integer("amount").notNull(), // Montant spécifique à cette sous-commande
     paymentMethod: paymentMethods("payment_method").notNull(),
     status: paymentStatuses("status").notNull().default("pending"),
     transactionId: varchar("transaction_id", { length: 100 }).unique(),
@@ -302,27 +355,44 @@ export const payments = pgTable(
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
+  (table) => [
+    index("payments_order_id_idx").on(table.orderId),
+    index("payments_store_order_id_idx").on(table.storeOrderId),
+  ]
 );
 
 // Table: storeCommissions (ex-sellerCommissions)
-export const storeCommissions = pgTable("store_commissions", {
-  id: serial("id").primaryKey(),
-  storeId: integer("store_id").references(() => stores.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  commissionRate: integer("commission_rate").notNull(),
-  commissionAmount: integer("commission_amount").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const storeCommissions = pgTable(
+  "store_commissions",
+  {
+    id: serial("id").primaryKey(),
+    storeId: integer("store_id").references(() => stores.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    storeOrderId: integer("store_order_id").references(() => storeOrders.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    commissionRate: integer("commission_rate").notNull(),
+    commissionAmount: integer("commission_amount").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("store_commissions_store_id_idx").on(table.storeId),
+    index("store_commissions_store_order_id_idx").on(table.storeOrderId),
+  ]
+);
 
 // Table: platformFees
-export const platformFees = pgTable("platform_fees", {
-  id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  storeFee: integer("store_fee").notNull(),
-  deliveryFee: integer("delivery_fee").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
+export const platformFees = pgTable(
+  "platform_fees",
+  {
+    id: serial("id").primaryKey(),
+    storeOrderId: integer("store_order_id").references(() => storeOrders.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    storeFee: integer("store_fee").notNull(), // Frais de la plateforme pour ce vendeur
+    deliveryFee: integer("delivery_fee").notNull(), // Frais de livraison facturés au client
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("platform_fees_store_order_id_idx").on(table.storeOrderId),
+  ]
+);
 // Table: driverPayments
 export const driverPayments = pgTable("driver_payments", {
   id: serial("id").primaryKey(),
@@ -339,15 +409,36 @@ export const driverPayments = pgTable("driver_payments", {
 // Table: dynamicDeliveryFees
 export const dynamicDeliveryFees = pgTable("dynamic_delivery_fees", {
   id: serial("id").primaryKey(),
+  // Dimensions de base
   region: varchar("region", { length: 50 }).notNull(),
   weightMin: integer("weight_min").notNull(),
   weightMax: integer("weight_max").notNull(),
   distanceMin: integer("distance_min").notNull(),
   distanceMax: integer("distance_max").notNull(),
-  fee: integer("fee").notNull(),
+  
+  // Tarification
+  baseFee: integer("base_fee").notNull(),
+  weightSurchargeRate: numeric("weight_surcharge_rate", { precision: 10, scale: 8 }),
+  distanceSurchargeRate: numeric("distance_surcharge_rate", { precision: 10, scale: 8 }),
+  
+  // Plages de sécurité
+  minFee: integer("min_fee"),
+  maxFee: integer("max_fee"),
+  
+  // Options de service
+  deliveryType: varchar("delivery_type", { length: 20 }).default('STANDARD'), // 'STANDARD'|'EXPRESS'|'SUPER_FAST'
+  vehicleType: varchar("vehicle_type", { length: 20 }), // 'MOTO', 'CAR', 'TRUCK'
+  isActive: boolean("is_active").default(true),
+  
+  // Métadonnées
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+  updatedAt: timestamp("updated_at").defaultNow()
+}, (table) => [
+  index("delivery_fees_region_idx").on(table.region),
+  index("delivery_fees_weight_idx").on(table.weightMax),
+  index("delivery_fees_distance_idx").on(table.distanceMax),
+  index("delivery_fees_type_idx").on(table.deliveryType)
+]);
 
 // 4. Tables d’interaction utilisateur
 
@@ -563,13 +654,21 @@ export const productPromotions = pgTable(
 // 6. Tables de gestion des retours
 
 // Table: orderStatusHistory
-export const orderStatusHistory = pgTable("order_status_history", {
-  id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  status: orderStatuses("status").notNull(),
-  changedAt: timestamp("changed_at").defaultNow(),
-  changedBy: integer("changed_by").references(() => users.id, { onDelete: "set null", onUpdate: "cascade" }),
-});
+export const orderStatusHistory = pgTable(
+  "order_status_history",
+  {
+    id: serial("id").primaryKey(),
+    orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade", onUpdate: "cascade" }).notNull(),
+    storeOrderId: integer("store_order_id").references(() => storeOrders.id, { onDelete: "cascade", onUpdate: "cascade" }), // Optionnel pour suivre par sous-commande
+    status: orderStatuses("status").notNull(),
+    changedAt: timestamp("changed_at").defaultNow(),
+    changedBy: integer("changed_by").references(() => users.id, { onDelete: "set null", onUpdate: "cascade" }),
+  },
+  (table) => [
+    index("order_status_history_order_id_idx").on(table.orderId),
+    index("order_status_history_store_order_id_idx").on(table.storeOrderId),
+  ]
+);
 
 // 7. Tables analytiques et admin
 
