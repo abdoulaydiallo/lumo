@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import {OrderFiltersBase, OrderPagination } from "@/lib/db/orders.search";
+import { OrderFiltersBase, OrderPagination } from "@/lib/db/orders.search";
 import { useOrders } from "@/features/orders/hooks/useOrders";
+import { useLogistics } from "@/features/logistics/hooks/useLogistics";
 import OrderStats from "./OrderStats";
 import OrderFilters from "./OrderFilters";
 import OrderList from "./OrderList";
-import {OrderDetailsDialog} from "./OrderDetailsDialog";
+import { OrderDetailsDialog } from "./OrderDetailsDialog";
 import OrderAssignDialog from "./OrderAssignDialog";
 import OrderCancelDialog from "./OrderCancelDialog";
 
@@ -35,6 +36,8 @@ interface OrderTableProps {
   initialPage: number;
   initialTotalPages: number;
   initialStats: any;
+  userId: number;
+  userRole: "store" | "admin" | "manager";
 }
 
 export default function OrderTable({
@@ -46,8 +49,9 @@ export default function OrderTable({
   initialPage,
   initialTotalPages,
   initialStats,
+  userId,
+  userRole,
 }: OrderTableProps) {
-  const userId = parseInt(searchParams.userId || "1", 10);
 
   const initialFilters: OrderFiltersBase = {
     status: searchParams.status
@@ -82,10 +86,8 @@ export default function OrderTable({
     per_page: parseInt(searchParams.perPage || "5", 10),
   };
 
-  const [filters, setFilters] =
-    React.useState<OrderFiltersBase>(initialFilters);
-  const [pagination, setPagination] =
-    React.useState<OrderPagination>(initialPagination);
+  const [filters, setFilters] = React.useState<OrderFiltersBase>(initialFilters);
+  const [pagination, setPagination] = React.useState<OrderPagination>(initialPagination);
   const [selectedOrder, setSelectedOrder] = React.useState<any | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = React.useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = React.useState(false);
@@ -101,10 +103,18 @@ export default function OrderTable({
     refetchWithParams,
     updateOrderStatus,
     cancelOrder,
-    assignDriver,
     isCancelling,
-    isAssigningDriver,
   } = useOrders(userId, filters, pagination);
+
+  const {
+    shipments,
+    drivers,
+    isLoadingShipments,
+    isLoadingDrivers,
+    updateShipment,
+    assignDriver,
+    isAssigning,
+  } = useLogistics( userId, userRole, selectedOrder?.storeOrderId);
 
   const handleFilterChange = (newFilters: {
     status: string;
@@ -133,20 +143,38 @@ export default function OrderTable({
     });
   };
 
-  const handleUpdateStatus = (orderId: number, currentStatus: string) => {
+  const handleUpdateStatus = async (orderId: number, currentStatus: string) => {
     const newStatus = currentStatus === "pending" ? "in_progress" : "delivered";
     updateOrderStatus({ orderId, status: newStatus });
+    if (newStatus === "in_progress" || newStatus === "delivered") {
+      const shipment = shipments?.find((s: any) => s.orderId === orderId);
+      if (shipment) {
+        await updateShipment({
+          shipmentId: shipment.id,
+          status: newStatus as "in_progress" | "delivered",
+        });
+      }
+    }
   };
 
-  const handleCancelOrder = (orderId: number) => {
+  const handleCancelOrder = async (orderId: number) => {
     cancelOrder(orderId);
     setOrderToCancel(null);
     setIsCancelDialogOpen(false);
   };
 
-  const handleAssignDriver = (orderId: number) => {
+  const handleAssignDriver = async (orderId: number) => {
     if (selectedDriver) {
-      assignDriver({ orderId, driverId: parseInt(selectedDriver) });
+      const shipment = shipments?.find((s: any) => s.orderId === orderId);
+      if (shipment) {
+        await assignDriver({
+          shipmentId: shipment.id,
+          driverId: parseInt(selectedDriver),
+        });
+      } else {
+        // Fallback to orderAssignDriver if no shipment exists yet
+        assignDriver({ shipmentId: shipment.id, driverId: parseInt(selectedDriver) });
+      }
       setIsAssignDialogOpen(false);
       setSelectedDriver("");
     }
@@ -156,7 +184,6 @@ export default function OrderTable({
     console.log(`Contacter le client avec l'ID ${userId}`);
   };
 
-  console.log(selectedOrder)
 
   return (
     <div className="px-2 py-4 md:px-4 md:py-6 space-y-4 min-h-screen">
@@ -167,7 +194,7 @@ export default function OrderTable({
         totalPages={totalPages || initialTotalPages}
         pagination={pagination}
         setPagination={setPagination}
-        isLoading={isLoading}
+        isLoading={isLoading || isLoadingShipments}
         setSelectedOrder={setSelectedOrder}
         setIsDetailsDialogOpen={setIsDetailsDialogOpen}
         setIsAssignDialogOpen={setIsAssignDialogOpen}
@@ -188,7 +215,9 @@ export default function OrderTable({
         selectedDriver={selectedDriver}
         setSelectedDriver={setSelectedDriver}
         handleAssignDriver={handleAssignDriver}
-        isAssigningDriver={isAssigningDriver}
+        isAssigningDriver={isAssigning}
+        drivers={drivers}
+        isLoadingDrivers={isLoadingDrivers}
       />
       <OrderCancelDialog
         order={orderToCancel}

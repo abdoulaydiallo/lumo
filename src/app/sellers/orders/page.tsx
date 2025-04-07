@@ -57,6 +57,8 @@ export default async function OrdersPage({
       initialPage={initialData.page}
       initialTotalPages={initialData.total_pages}
       initialStats={initialData.stats}
+      userId={user.id} // Pass the userId to the OrderTable component
+      userRole={user.role} // Pass the userRole to the OrderTable component
     />
   );
 }
