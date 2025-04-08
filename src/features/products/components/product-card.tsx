@@ -99,7 +99,7 @@ export default function ProductCard({ product, storeId }: ProductCardProps) {
       <Card className="flex flex-col w-full h-[400px] border border-gray-200 dark:border-gray-700 rounded-md">
         {/* Section Image */}
         <div
-          className="relative w-full h-[180px]"
+          className="relative w-full max-[210px]"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
         >
