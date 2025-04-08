@@ -82,7 +82,7 @@ export default function Navbar({
       <div className="flex items-center gap-2">
         <SidebarTrigger />
         <Link href="#">
-          <div className="text-lg font-bold text-orange-500">Marketplace</div>
+          <div className="text-lg font-bold text-orange-500">Goulo</div>
         </Link>
       </div>
 

@@ -84,7 +84,7 @@ export async function Navbar({ logo = "Lumo", className }: NavbarProps) {
       )}
     >
       <div className="px-4 md:px-8 lg:px-12 flex items-center justify-between gap-3 py-4">
-        <Logo title="Marketplace" />
+        <Logo title="Goulo" />
         <SearchBar className="flex-1 max-w-3xl hidden md:block" />
         <UserActions
           className="items-center space-x-2 hidden md:flex"
