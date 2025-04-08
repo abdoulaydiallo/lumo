@@ -96,10 +96,10 @@ export default function ProductCard({ product, storeId }: ProductCardProps) {
       transition={{ duration: 0.5 }}
       className="w-full max-w-[300px] mx-auto"
     >
-      <Card className="flex flex-col w-full max-h-[420px] border border-gray-200 dark:border-gray-700 rounded-md">
+      <Card className="flex flex-col w-full h-[420px] border border-gray-200 dark:border-gray-700 rounded-md">
         {/* Section Image */}
         <div
-          className="relative w-full h-[180px]"
+          className="relative w-full h-full pt-4"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
         >
@@ -147,7 +147,7 @@ export default function ProductCard({ product, storeId }: ProductCardProps) {
             </>
           )}
           {/* Badges avec gap et repositionnement */}
-          <div className="absolute top-2 left-2 flex gap-2">
+          <div className="absolute top-4 left-2 flex gap-2">
             {hasPromotion && (
               <motion.span
                 initial={{ scale: 0 }}
@@ -195,14 +195,14 @@ export default function ProductCard({ product, storeId }: ProductCardProps) {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               {hasPromotion ? (
-                <>
+                <div className="flex flex-col md:flex-row gap-2">
                   <span className="text-base font-semibold">
                     {discountedPrice.toLocaleString()} GNF
                   </span>
-                  <span className="text-xs text-muted-foreground line-through">
+                  <span className="text-sm text-muted-foreground line-through">
                     {product.price.toLocaleString()} GNF
                   </span>
-                </>
+                </div>
               ) : (
                 <span className="text-base font-semibold">
                   {product.price.toLocaleString()} GNF
