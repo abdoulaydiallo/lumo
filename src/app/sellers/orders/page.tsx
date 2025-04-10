@@ -1,8 +1,7 @@
-// @/app/sellers/orders/page.tsx
 export const dynamic = "force-dynamic";
 
-import OrderTable from "@/components/dashboard/orders/OrderTable";
-import { getInitialOrders } from "@/features/orders/api/queries";
+import { StoreOrdersTable } from "@/components/dashboard/orders/OrderTable";
+import { getInitialStoreOrders } from "@/features/store-orders/api/queries";
 import { getUser } from "@/lib/auth";
 import {
   orderStatuses,
@@ -11,54 +10,56 @@ import {
 } from "@/lib/db/schema";
 import { redirect } from "next/navigation";
 
-interface SearchParams {
+export interface SearchParams {
   status?: string;
   paymentStatus?: string;
   paymentMethod?: string;
-  userId?: string;
-  storeId?: string;
-  driverId?: string;
+  shipmentStatus?: string;
   startDate?: string;
   endDate?: string;
-  searchTerm?: string;
-  sort?: string;
+  paymentStartDate?: string;
+  paymentEndDate?: string;
+  minAmount?: string;
+  maxAmount?: string;
   page?: string;
   perPage?: string;
 }
 
-export default async function OrdersPage({
+export default async function SellerOrdersPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
 }) {
   const user = await getUser();
 
+  // Vérification de l'utilisateur et redirection si non-vendeur
   if (!user?.id || user?.role !== "store") {
     redirect("/marketplace/products");
   }
 
-  // Await the searchParams to resolve its values
+  // Résolution des searchParams
   const resolvedSearchParams = await searchParams;
 
-  const initialData = await getInitialOrders(
+  // Récupération des données initiales des sous-commandes
+  const initialData = await getInitialStoreOrders(
     Number(user.id),
     user.role as "store",
     resolvedSearchParams
   );
 
   return (
-    <OrderTable
-      searchParams={resolvedSearchParams} 
+    <StoreOrdersTable
+      searchParams={resolvedSearchParams}
       statusOptions={orderStatuses.enumValues}
       paymentStatusOptions={paymentStatuses.enumValues}
       paymentMethodOptions={paymentMethods.enumValues}
-      initialOrders={initialData.orders}
+      initialOrders={initialData.storeOrders} 
       initialTotal={initialData.total}
       initialPage={initialData.page}
-      initialTotalPages={initialData.total_pages}
+      initialTotalPages={initialData.totalPages}
       initialStats={initialData.stats}
-      userId={user.id} // Pass the userId to the OrderTable component
-      userRole={user.role} // Pass the userRole to the OrderTable component
+      userId={user.id}
+      userRole={user.role}
     />
   );
 }

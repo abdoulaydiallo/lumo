@@ -11,8 +11,9 @@ import {
   XCircle,
 } from "lucide-react";
 import { Duration } from "./Duration";
+import { StoreOrderStats, StoreOrderWithDetails } from "@/algorithms/storeOrders.search";
 
-export default function OrderStats({ orders, stats }: { orders: any[]; stats: any }) {
+export default function OrderStats({ orders, stats }: { orders: StoreOrderWithDetails[]; stats: StoreOrderStats }) {
   const totalOrders = orders.length;
   const delayedCount = orders.filter(o => o.isDelayed).length;
   const delayedPercentage = totalOrders > 0
@@ -24,8 +25,8 @@ export default function OrderStats({ orders, stats }: { orders: any[]; stats: an
     {
       id: "delivered",
       label: "Livrées",
-      shortLabel: "Liv",
-      value: stats?.status_distribution?.delivered || 0,
+      shortLabel: "Livrées",
+      value: stats?.statusDistribution?.delivered || 0,
       icon: CheckCircle,
       color: "bg-green-500",
       textColor: "text-green-500"
@@ -33,8 +34,8 @@ export default function OrderStats({ orders, stats }: { orders: any[]; stats: an
     {
       id: "in_progress",
       label: "En cours",
-      shortLabel: "Cours",
-      value: stats?.status_distribution?.in_progress || 0,
+      shortLabel: "En Cours",
+      value: stats?.statusDistribution?.in_progress || 0,
       icon: Clock,
       color: "bg-yellow-400",
       textColor: "text-yellow-500"
@@ -42,8 +43,8 @@ export default function OrderStats({ orders, stats }: { orders: any[]; stats: an
     {
       id: "pending",
       label: "En attente",
-      shortLabel: "Att",
-      value: stats?.status_distribution?.pending || 0,
+      shortLabel: "En attente",
+      value: stats?.statusDistribution?.pending || 0,
       icon: Loader2,
       color: "bg-gray-400",
       textColor: "text-gray-500"
@@ -51,8 +52,8 @@ export default function OrderStats({ orders, stats }: { orders: any[]; stats: an
     {
       id: "cancelled",
       label: "Annulées",
-      shortLabel: "Annul",
-      value: stats?.status_distribution?.cancelled || 0,
+      shortLabel: "Annulées",
+      value: stats?.statusDistribution?.cancelled || 0,
       icon: XCircle,
       color: "bg-red-500",
       textColor: "text-red-500"
@@ -74,7 +75,7 @@ export default function OrderStats({ orders, stats }: { orders: any[]; stats: an
         
         <StatBlock 
           title="À temps" 
-          value={`${stats?.on_time_percentage || 0}%`} 
+          value={`${stats?.onTimePercentage || 0}%`} 
           icon={CheckCircle}
           variant="positive"
           className="col-span-1"
@@ -93,7 +94,7 @@ export default function OrderStats({ orders, stats }: { orders: any[]; stats: an
         {/* Desktop: Tous les KPI */}
         <StatBlock 
           title="CA Total" 
-          value={`${(stats?.total_amount || 0).toLocaleString()} GNF`} 
+          value={`${(stats?.totalAmount || 0).toLocaleString()} GNF`} 
           icon={Package}
           description={`${totalOrders} cmd`}
           className="hidden md:block flex-1 min-w-[150px]"
@@ -101,7 +102,7 @@ export default function OrderStats({ orders, stats }: { orders: any[]; stats: an
         
         <StatBlock 
           title="Livraison" 
-          value={<Duration value={stats?.avg_delivery_time || 0} format="short" className="font-mono" />} 
+          value={<Duration value={stats?.avgDeliveryTime || 0} format="short" className="font-mono" />} 
           icon={Timer}
           description="Moyenne"
           className="hidden md:block flex-1 min-w-[120px]"
@@ -110,7 +111,7 @@ export default function OrderStats({ orders, stats }: { orders: any[]; stats: an
         <StatBlock 
           title="Préparation" 
           value={<Duration 
-            value={stats?.avg_preparation_time || 0 }
+            value={stats?.avgPreparationTime || 0 }
             format="auto" 
             className="font-mono" />
         } 
@@ -121,7 +122,7 @@ export default function OrderStats({ orders, stats }: { orders: any[]; stats: an
         
         <StatBlock 
           title="À temps" 
-          value={`${stats?.on_time_percentage || 0}%`} 
+          value={`${stats?.onTimePercentage || 0}%`} 
           icon={CheckCircle}
           variant="positive"
           description="Livraisons"
@@ -139,7 +140,7 @@ export default function OrderStats({ orders, stats }: { orders: any[]; stats: an
       </div>
 
       {/* Section Statuts - Adaptative */}
-      <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm">
+      <div className=" rounded-lg p-3 sm:p-4 shadow-sm">
         <h3 className="text-sm sm:text-base font-medium mb-2 sm:mb-3">
           Statut des commandes
         </h3>
@@ -159,7 +160,7 @@ export default function OrderStats({ orders, stats }: { orders: any[]; stats: an
                     <span className="truncate">{status.shortLabel}</span>
                     <span className="font-medium">{percentage}%</span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
+                  <div className="w-full bg-gray-100  rounded-full h-1.5 mt-1">
                     <div
                       className={`h-1.5 rounded-full ${status.color}`}
                       style={{ width: `${percentage}%` }}
@@ -222,7 +223,7 @@ function StatBlock({
 }) {
   return (
     <div className={cn(
-      "bg-gray-50 rounded-lg p-2 sm:p-3",
+      "border rounded-lg p-2 sm:p-3",
       mobileOnly ? "block md:hidden" : "",
       variant === "positive" ? "text-green-600" : "",
       variant === "negative" ? "text-red-600" : "",

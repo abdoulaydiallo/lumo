@@ -100,54 +100,6 @@ async function checkAddressOwnership(userId: number, addressId: number): Promise
   }
 }
 
-// Calcul des frais de livraison dynamiques
-async function calculateDynamicDeliveryFee(
-  region: string,
-  totalWeight: number,
-  distance: number,
-  deliveryType: string = "STANDARD"
-): Promise<{ fee: number; estimatedDays: number }> {
-  const [feeRule] = await db
-    .select({
-      baseFee: dynamicDeliveryFees.baseFee,
-      weightSurchargeRate: dynamicDeliveryFees.weightSurchargeRate,
-      distanceSurchargeRate: dynamicDeliveryFees.distanceSurchargeRate,
-      minFee: dynamicDeliveryFees.minFee,
-      maxFee: dynamicDeliveryFees.maxFee,
-      vehicleType: dynamicDeliveryFees.vehicleType,
-    })
-    .from(dynamicDeliveryFees)
-    .where(
-      and(
-        eq(dynamicDeliveryFees.region, region),
-        gte(dynamicDeliveryFees.weightMax, totalWeight),
-        lte(dynamicDeliveryFees.weightMin, totalWeight),
-        gte(dynamicDeliveryFees.distanceMax, distance),
-        lte(dynamicDeliveryFees.distanceMin, distance),
-        eq(dynamicDeliveryFees.deliveryType, deliveryType),
-        eq(dynamicDeliveryFees.isActive, true)
-      )
-    )
-    .limit(1);
-
-  if (!feeRule) {
-    return { fee: 15000, estimatedDays: 3 }; // Valeur par défaut
-  }
-
-  const baseFee = feeRule.baseFee;
-  const weightSurcharge = totalWeight > 1000 ? Math.ceil((totalWeight - 1000) / 1000) * Number(feeRule.weightSurchargeRate || 0) : 0;
-  const distanceSurcharge = distance > 10 ? Math.ceil((distance - 10) / 10) * Number(feeRule.distanceSurchargeRate || 0) : 0;
-  let totalFee = baseFee + weightSurcharge + distanceSurcharge;
-
-  const vehicleAdjustments = { "MOTO": 0.9, "CAR": 1.0, "TRUCK": 1.2 };
-  const vehicleFactor = feeRule.vehicleType ? vehicleAdjustments[feeRule.vehicleType] || 1.0 : 1.0;
-  totalFee = Math.max(baseFee, totalFee * vehicleFactor); // Ne descend pas sous baseFee
-
-  totalFee = Math.max(feeRule.minFee || 0, Math.min(feeRule.maxFee || Infinity, totalFee));
-  const estimatedDays = deliveryType === "EXPRESS" ? (distance <= 20 ? 2 : 4) : (distance <= 30 ? 3 : 5);
-
-  return { fee: Math.round(totalFee), estimatedDays };
-}
 
 // Validation et application d'une promotion
 async function applyPromotion(promoCode: string, items: OrderItemInsert[]): Promise<number> {

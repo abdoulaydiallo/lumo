@@ -78,7 +78,7 @@ export default function Navbar({
   ).length; // Sécurité avec ?? []
 
   return (
-    <nav className="sticky top-0 w-full p-4 border-b bg-white dark:bg-gray-800 flex items-center justify-between z-40">
+    <nav className="sticky top-0 w-full p-4 border-b bg-background/95 backdrop-blur flex items-center justify-between z-40">
       <div className="flex items-center gap-2">
         <SidebarTrigger />
         <Link href="#">

@@ -197,7 +197,7 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
   };
 
   const renderStepIndicator = () => (
-    <div className="flex justify-between mb-8">
+    <div className="flex justify-around mb-8">
       <StepIndicator
         label="Destinataire"
         active={step === 1}
@@ -760,14 +760,6 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
           ) : (
             <div className="flex gap-2 ml-auto">
               <Button
-                type="button"
-                variant="outline"
-                onClick={() => setStep(3)}
-                disabled={isPending}
-              >
-                Modifier
-              </Button>
-              <Button
                 type="submit"
                 disabled={isPending}
                 className="flex items-center gap-4"
@@ -778,7 +770,7 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
                     Création...
                   </>
                 ) : (
-                  "Confirmer et créer l'adresse"
+                  "créer l'adresse"
                 )}
               </Button>
             </div>

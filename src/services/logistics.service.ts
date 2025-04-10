@@ -269,8 +269,8 @@ export const logisticsService = {
             ERROR_CODES.AUTHORIZATION_ERROR,
             "Vendeur ne peut modifier que ses propres expéditions"
           );
-          await checkSellerOwnership(callerUserId, shipment.storeOrderId);
         }
+        await checkSellerOwnership(callerUserId, shipment.storeOrderId);
 
         const updates: any = { updatedAt: new Date() };
         if (updateData.status) {

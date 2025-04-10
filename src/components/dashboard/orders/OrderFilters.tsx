@@ -107,7 +107,7 @@ export default function OrderFilters({ onFilterChange }: OrderFiltersProps) {
         <Button
           variant="outline"
           onClick={handleReset}
-          className="bg-gray-100 hover:bg-gray-200 w-full sm:w-auto"
+          className=" w-full sm:w-auto"
         >
           Réinitialiser
         </Button>

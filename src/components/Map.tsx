@@ -360,7 +360,7 @@ export const Map = ({
   }
 
   return (
-    <div className={cn('relative h-full w-full', className)}>
+    <div className={cn('relative h-72 w-full', className)}>
       <AnimatePresence>
         {loading && (
           <motion.div

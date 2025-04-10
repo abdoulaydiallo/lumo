@@ -38,7 +38,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
       >
         {completed ? '✓' : icon}
       </span>
-      <span className="text-sm whitespace-nowrap">{label}</span>
+      <span className="hidden md:block text-sm whitespace-nowrap">{label}</span>
     </button>
   );
 };
