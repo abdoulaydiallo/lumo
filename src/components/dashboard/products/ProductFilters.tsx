@@ -61,7 +61,7 @@ export default function ProductFilters({
   };
 
   return (
-    <div className="space-y-4 p-4 border rounded-lg bg-white">
+    <div className="space-y-4 p-4 border rounded-lg ">
       <div className="flex items-center gap-4 flex-wrap">
         <div className="w-full md:w-1/2 lg:w-1/3">
           <Label htmlFor="searchTermFilter" className="text-sm">
@@ -144,7 +144,7 @@ export default function ProductFilters({
         <Button
           variant="outline"
           onClick={handleReset}
-          className="bg-gray-100 hover:bg-gray-200"
+          className=""
         >
           Réinitialiser
         </Button>

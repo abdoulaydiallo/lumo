@@ -8,7 +8,7 @@ import {
   TrackingInsert,
 } from "@/services/logistics.service";
 
-export function useLogistics(userId: number, role: "store" | "admin" | "manager", orderId?: number) {
+export function useLogistics(userId: number, role: "store" | "admin" | "manager" | "driver", orderId?: number) {
   const queryClient = useQueryClient();
 
   // Requête pour récupérer les expéditions d'une commande

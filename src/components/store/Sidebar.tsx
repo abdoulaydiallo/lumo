@@ -9,6 +9,7 @@ import {
   HelpCircle,
   BarChart,
   Percent,
+  ShipIcon,
 } from "lucide-react";
 import {
   Sidebar,
@@ -54,6 +55,13 @@ export default function AppSidebar({
       icon: <Truck className="h-4 w-4" />,
       isActive: pathname === "/sellers/orders",
       count: layoutData.orders.inProgress + layoutData.orders.completed,
+    },
+    {
+      title: "Expéditions",
+      url: "/sellers/shipments",
+      icon: <ShipIcon className="h-4 w-4" />,
+      isActive: pathname === "/sellers/shipments",
+      count: layoutData.drivers.total,
     },
     {
       title: "Livreurs",

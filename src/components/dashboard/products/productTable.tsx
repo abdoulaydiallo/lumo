@@ -177,7 +177,7 @@ export default function ProductTable({
   return (
     <div className="container mx-auto px-4 py-6 space-y-6 min-h-screen">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold ">
           Produits
         </h1>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
