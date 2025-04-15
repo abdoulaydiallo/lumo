@@ -713,14 +713,6 @@ export const AddressForm = ({ userId, createAddress, onSuccess }: AddressFormPro
           {step === 4 && (
             <div className="space-y-6">
               {renderAddressSummary()}
-              
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <h4 className="font-medium text-blue-800 mb-2">Vérifiez attentivement les informations</h4>
-                <p className="text-blue-700 text-sm">
-                  Assurez-vous que toutes les informations sont correctes avant de soumettre. 
-                  Une fois créée, l'adresse ne pourra être modifiée que par le support client.
-                </p>
-              </div>
             </div>
           )}
         </motion.div>

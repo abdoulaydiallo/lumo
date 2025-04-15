@@ -128,7 +128,7 @@ export function AddressSelector({
                   Nouvelle adresse
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl overflow-y-scroll">
                 <DialogHeader>
                   <DialogTitle>Ajouter une adresse</DialogTitle>
                 </DialogHeader>
