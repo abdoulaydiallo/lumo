@@ -36,7 +36,7 @@ interface LoginFormProps {
 export function LoginForm({ className, ...props }: LoginFormProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const callbackUrl = searchParams.get("callbackUrl") || "/marketplace";
+  const callbackUrl = searchParams.get("callbackUrl") || "/marketplace/products";
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
