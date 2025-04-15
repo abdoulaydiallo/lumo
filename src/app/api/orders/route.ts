@@ -35,8 +35,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<a
 
     const orderDataWithUserId: OrderInsert = {
       userId: callerUserId,
-      paymentMethod: "",
-      paymentAmount: 0,
       ...orderData,
     };
 

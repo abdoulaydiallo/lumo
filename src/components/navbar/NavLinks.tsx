@@ -8,7 +8,7 @@ interface NavLinksProps {
 
 export function NavLinks({ links, className }: NavLinksProps) {
   return (
-    <div className={`${className} flex flex-col items-center py-1 md:flex-row gap-2 justify-start md:justify-center border-t mt-2`}>
+    <div className={`${className} flex flex-col items-start py-1 md:flex-row gap-2 justify-start md:justify-center border-t mt-2`}>
       {links.map((link) => (
         <Link
           key={link.href}

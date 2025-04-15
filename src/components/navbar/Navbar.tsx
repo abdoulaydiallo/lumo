@@ -30,20 +30,8 @@ export async function Navbar({ logo = "Lumo", className }: NavbarProps) {
       ],
       store: [
         {
-          href: `/marketplace/stores/${store?.id || ""}`,
+          href: `/sellers`,
           label: "Ma Boutique",
-        },
-        {
-          href: `/marketplace/stores/${store?.id || ""}/settings`,
-          label: "Paramètres",
-        },
-        {
-          href: `/marketplace/stores/${store?.id || ""}/analytics`,
-          label: "Analytiques",
-        },
-        {
-          href: `/marketplace/stores/${store?.id || ""}/orders`,
-          label: "Commandes",
         },
       ],
       driver: [
@@ -83,13 +71,15 @@ export async function Navbar({ logo = "Lumo", className }: NavbarProps) {
         className
       )}
     >
-      <div className="px-4 md:px-8 lg:px-12 flex items-center justify-between gap-3 py-4">
+      <div className="px-2 md:px-4 flex items-center justify-between gap-3 py-4">
         <Logo title="Goulo" />
-        <SearchBar className="flex-1 max-w-3xl hidden md:block" />
-        <UserActions
-          className="items-center space-x-2 hidden md:flex"
-        />
-        <MobileMenu links={links} logo={logo} />
+        <SearchBar className="flex-1 max-w-3xl" />
+        <div className="flex items-center gap-2 md:gap-6">
+          <UserActions
+            className="flex items-center space-x-2"
+          />
+          <MobileMenu links={links} logo={<Logo title="Goulo"/>} />
+        </div>
       </div>
     </nav>
   );

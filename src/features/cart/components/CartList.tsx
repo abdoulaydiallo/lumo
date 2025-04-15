@@ -101,7 +101,7 @@ export function CartList() {
         <Card className="border border-gray-200 dark:border-gray-700 rounded-md">
           <CardHeader className="flex flex-row justify-between items-center">
             <CardTitle className="text-lg font-semibold">
-              Votre Panier ({cart.total})
+              Votre Panier ({cart.items.length} article{cart.items.length > 1 ? "s" : ""})
             </CardTitle>
             <Button
               variant="ghost"
@@ -125,13 +125,13 @@ export function CartList() {
                   className="flex items-center justify-between border-b pb-4 last:border-b-0"
                 >
                   <div className="flex items-center gap-4 flex-1">
-                    <div className="w-16 h-16 relative">
+                    <div className="w-16 h-16 relative overflow-hidden">
                       <Image
                         src={item.productImage || "/placeholder-image.jpg"}
                         alt={item.productName || "Produit sans nom"}
                         width={64}
                         height={64}
-                        className="object-contain rounded-md"
+                        className="object-contain object-center rounded-md overflow-hidden"
                         loading="lazy"
                       />
                     </div>

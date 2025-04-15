@@ -7,6 +7,9 @@ import {
   SortOption,
 } from "@/lib/db/search.engine";
 import LoadingSkeleton from "@/app/marketplace/products/components/loading-skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowUp } from "lucide-react";
 
 interface SearchResultsProps {
   filters: SearchFilters;
@@ -32,24 +35,9 @@ export default function SearchResults({
     initialData
   );
 
-  const [isMounted, setIsMounted] = useState(false);
-
-  // Gestion de l'état de montage
   useEffect(() => {
-    setIsMounted(true);
-    return () => setIsMounted(false); // Nettoyage lorsque le composant est démonté
-  }, []);
-
-  // Logique de gestion de l'état de "hasMore" en fonction des données
-  useEffect(() => {
-    if (isMounted && data) {
-      if (!data.nextCursor) {
-        setHasMore(false); // Si il n'y a pas de prochain curseur, on indique qu'il n'y a plus de données à charger
-      } else {
-        setHasMore(true);
-      }
-    }
-  }, [data, isMounted]);
+    setHasMore(!!data?.nextCursor);
+  }, [data]);
 
   const handleObserver = useCallback(
     (entries: IntersectionObserverEntry[]) => {
@@ -58,7 +46,7 @@ export default function SearchResults({
         onCursorChange(data.nextCursor);
       }
     },
-    [data, isLoading, hasMore, onCursorChange]
+    [hasMore, isLoading, data?.nextCursor, onCursorChange]
   );
 
   useEffect(() => {
@@ -70,37 +58,51 @@ export default function SearchResults({
     observer.current = new IntersectionObserver(handleObserver, options);
     if (loadMoreRef.current) observer.current.observe(loadMoreRef.current);
 
-    return () => observer.current?.disconnect(); // Nettoyage de l'observateur à la sortie
+    return () => observer.current?.disconnect();
   }, [handleObserver]);
 
   return (
-    <div className="flex-1">
-      {isLoading && !data?.products.length ? (
-        <div className="py-8 container mx-auto">
-          <LoadingSkeleton />
-        </div>
-      ) : error ? (
-        <p className="text-center text-destructive py-8">{error}</p>
-      ) : data && data.products?.length > 0 ? (
+    <section className="flex-1">
+      {data && data.products?.length > 0 && (
         <div className="py-4">
           <ProductList products={data.products} />
-          <div ref={loadMoreRef} className="h-1" />
-          {hasMore && (
-            <div ref={loadMoreRef} className="py-8 container mx-auto">
-              <LoadingSkeleton />
-            </div>
-          )}
-          {!hasMore && (
-            <p className="text-center text-muted-foreground py-10">
-              Fin des résultats
-            </p>
-          )}
         </div>
-      ) : (
-        <p className="text-center text-muted-foreground py-10">
+      )}
+      {(isLoading || hasMore) && (
+        <div ref={isLoading ? null : loadMoreRef} className="py-2 container mx-auto">
+          <LoadingSkeleton />
+        </div>
+      )}
+      {!isLoading && !hasMore && data && data.products?.length > 0 && (
+        <div className="container mx-auto py-8">
+          <div className="flex flex-col items-center justify-center space-y-4">
+              <p
+                aria-live="polite"
+                className="text-muted-foreground text-lg font-medium"
+              >
+                Vous avez atteint la fin des résultats
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                className="hover:bg-primary hover:text-primary-foreground transition-colors"
+              >
+                Revenir en haut
+              </Button>
+          </div>
+        </div>
+      )}
+      {error && (
+        <p aria-live="polite" className="text-center text-destructive py-8">
+          {error}
+        </p>
+      )}
+      {!isLoading && !data?.products?.length && (
+        <p aria-live="polite" className="text-center text-muted-foreground py-10">
           Aucun produit trouvé. Entrez un terme ou appliquez des filtres.
         </p>
       )}
-    </div>
+    </section>
   );
 }

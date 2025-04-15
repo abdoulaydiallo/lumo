@@ -83,24 +83,9 @@ export function UserActions({ className }: UserActionsProps) {
 
 
   return (
-    <div className={className}>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={toggleTheme}
-        className="hover:bg-muted/20 rounded-full"
-        aria-label="Changer le thème"
-      >
-        {theme === "light" ? (
-          <Sun className="h-4 w-4" />
-        ) : theme === "dark" ? (
-          <Moon className="h-4 w-4" />
-        ) : (
-          <Monitor className="h-4 w-4" />
-        )}
-      </Button>
+    <div className={`${className}`}>
       {session?.user ? (
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 md:gap-4">
           <Link
             href="/marketplace/wishlists"
             className="p-1.5 hover:bg-muted/20 rounded-full relative"
@@ -136,7 +121,7 @@ export function UserActions({ className }: UserActionsProps) {
               </span>
             )}
           </Link>
-          <Link href="/user/profile">
+          <Link href="/user/profile" className="hidden md:block">
             <UserAvatar className="h-7 w-7" />
           </Link>
         </div>
@@ -150,6 +135,21 @@ export function UserActions({ className }: UserActionsProps) {
           <Link href="/login">Connexion</Link>
         </Button>
       )}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggleTheme}
+        className="hover:bg-muted/20 rounded-full"
+        aria-label="Changer le thème"
+      >
+        {theme === "light" ? (
+          <Sun className="h-4 w-4" />
+        ) : theme === "dark" ? (
+          <Moon className="h-4 w-4" />
+        ) : (
+          <Monitor className="h-4 w-4" />
+        )}
+      </Button>
     </div>
   );
 }

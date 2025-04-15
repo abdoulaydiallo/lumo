@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useStoreLayout } from "@/features/store/hooks/useStoreLayout";
 import { User, Notification } from "@/features/store/types";
+import { signOut } from "next-auth/react";
 
 export default function Navbar({
   user,
@@ -157,7 +158,7 @@ export default function Navbar({
               <Link href="/settings">Paramètres</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-500">
+            <DropdownMenuItem className="text-red-500" onClick={() => signOut()}>
               <LogOut className="h-4 w-4 mr-2" /> Déconnexion
             </DropdownMenuItem>
           </DropdownMenuContent>

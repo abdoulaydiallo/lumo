@@ -1,4 +1,3 @@
-// components/DeliveryEstimation.tsx
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -11,9 +10,9 @@ import { DeliveryOption } from "@/features/delivery/hooks/useDeliveryEstimation"
 
 interface DeliveryEstimationProps {
   isEstimating: boolean;
-  estimation: DeliveryFeeEstimate[] | undefined; // Maintenant un tableau
+  estimation: DeliveryFeeEstimate[] | undefined;
   estimationError: Error | null;
-  deliveryOptions?: DeliveryOption[]; // Options de livraison en cache
+  deliveryOptions?: DeliveryOption[];
   isFetchingOptions: boolean;
 }
 
@@ -21,10 +20,8 @@ export function DeliveryEstimation({
   isEstimating,
   estimation,
   estimationError,
-  deliveryOptions,
   isFetchingOptions,
 }: DeliveryEstimationProps) {
-  console.log(estimation, "estimation"); // Pour le débogage
   return (
     <Card className="w-full">
       <CardHeader>
@@ -71,21 +68,20 @@ export function DeliveryEstimation({
                     </div>
                   ) : null}
                   <Separator />
-                  
                   <div className="flex justify-between font-semibold">
                     <span>Frais Final</span>
                     <span>{est.breakdown.finalFee.toLocaleString('fr-FR')} GNF</span>
                   </div>
                   <div className="text-muted-foreground space-y-1">
-                    <p>
+                    <div>
                       Type : <Badge variant="secondary">{est.breakdown.deliveryType}</Badge>
-                    </p>
-                    <p>
+                    </div>
+                    <div>
                       Vehicule : <Badge variant="secondary">{est.vehicleType}</Badge>
-                    </p>
-                    <p>
+                    </div>
+                    <div>
                       Délai : <span className="font-medium">{est.breakdown.estimatedDeliveryDays} jour(s)</span>
-                    </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -102,14 +98,11 @@ export function DeliveryEstimation({
             <p>Aucune estimation disponible</p>
           </div>
         )}
-
-        {/* Affichage des options de livraison */}
         {isFetchingOptions && (
           <div className="text-center text-muted-foreground mt-4">
             <p>Récupération des options en cours...</p>
           </div>
         )}
-        
       </CardContent>
     </Card>
   );

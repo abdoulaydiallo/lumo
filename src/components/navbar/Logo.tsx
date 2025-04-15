@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 interface IParams {
@@ -11,10 +12,11 @@ export const Logo = ({ title }: IParams) => {
 
   return (
     <div
-      onClick={() => router.push("/")}
-      className="text-2xl font-bold text-primary hover:text-primary/90 transition-colors cursor-pointer"
+      onClick={() => router.push("/marketplace/products")}
+      className="text-2xl font-bold text-primary hover:text-primary/90 transition-colors cursor-pointer flex items-center"
     >
-      {title}
+      <Image alt="Logo" src="/logo.svg" width={40} height={40} className="inline-block" />
+      {title && (<span className="cursor-pointer">{title}</span>)}
     </div>
   );
 };

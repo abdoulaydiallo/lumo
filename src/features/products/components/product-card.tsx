@@ -96,7 +96,7 @@ export default function ProductCard({ product, storeId }: ProductCardProps) {
       transition={{ duration: 0.5 }}
       className="w-full max-w-[300px] mx-auto"
     >
-      <Card className="flex flex-col w-full h-[420px] border border-gray-200 dark:border-gray-700 rounded-md">
+      <Card className="flex flex-col w-full h-[420px] border  rounded-md">
         {/* Section Image */}
         <div
           className="relative w-full h-full pt-4"

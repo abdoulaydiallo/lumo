@@ -1,7 +1,6 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { X, ShoppingCart, Heart, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -9,12 +8,10 @@ import {
   SheetTrigger,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { UserAvatar } from "@/components/UserAvatar";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { signOut } from "next-auth/react";
 import { NavLink } from "./types";
-import { SearchBar } from "./SearchBar";
 import { NavLinks } from "./NavLinks";
 import { JSX } from "react";
 
@@ -75,14 +72,6 @@ export function MobileMenu({ links, logo }: MobileMenuProps) {
             <Link href="/" className="text-lg font-bold text-primary">
               {logo}
             </Link>
-            <Button variant="ghost" size="icon" className="hover:bg-muted/20">
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Recherche */}
-          <div className="px-3 py-1">
-            <SearchBar className="w-full" />
           </div>
 
           {/* Navigation */}
@@ -94,36 +83,9 @@ export function MobileMenu({ links, logo }: MobileMenuProps) {
           <div className="px-3 py-2 space-y-1">
             {session?.user ? (
               <>
-                <Link
-                  href="/user/wishlists"
-                  className="flex items-center space-x-2 text-sm font-medium text-foreground hover:bg-muted/10 rounded px-2 py-1"
-                >
-                  <Heart className="h-4 w-4" />
-                  <span>Wishlist</span>
-                </Link>
-                <Link
-                  href="/user/cart"
-                  className="flex items-center space-x-2 text-sm font-medium text-foreground hover:bg-muted/10 rounded px-2 py-1"
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  <span>Panier</span>
-                </Link>
-                <Link
-                  href="/user/profile"
-                  className="flex items-center space-x-2 text-sm font-medium text-foreground hover:bg-muted/10 rounded px-2 py-1"
-                >
-                  <UserAvatar className="h-6 w-6" />
-                  <span>Profil</span>
-                </Link>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="w-full justify-start space-x-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded px-2 py-1"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>Déconnexion</span>
-                </Button>
+                <div className="text-red-500" onClick={() => signOut()}>
+                  Déconnexion
+                </div>
               </>
             ) : (
               <Button

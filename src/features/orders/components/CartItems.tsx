@@ -101,7 +101,7 @@ export function CartItems({
                 <TableCell className="flex items-center gap-3">
                   <div className="w-12 h-12 relative rounded-md overflow-hidden">
                     <Image
-                      src={item.productImage || "/placeholder-product.jpg"}
+                      src={item.productImage  || "/placeholder-image.jpg"}
                       alt={item.productName || "Produit sans nom"}
                       width={48}
                       height={48}
