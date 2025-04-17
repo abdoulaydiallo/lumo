@@ -7,9 +7,7 @@ import {
   SortOption,
 } from "@/lib/db/search.engine";
 import LoadingSkeleton from "@/app/marketplace/products/components/loading-skeleton";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowUp } from "lucide-react";
 
 interface SearchResultsProps {
   filters: SearchFilters;
